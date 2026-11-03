@@ -102,7 +102,11 @@ function readJpegSize(bytes: Uint8Array): { width: number; height: number } {
  * De byte-offsets voor de xref-tabel worden exact bijgeteld (PDF is binair/latin1, geen UTF-8);
  * dit deelt dezelfde offset-boekhouding als de oorspronkelijke single-page-generator.
  */
-export function buildImagePdf(pages: PdfImagePage[]): Uint8Array<ArrayBuffer> {
+export function buildImagePdf(
+  pages: PdfImagePage[],
+  /** `printScalingNone`: vraag de lezer op ware grootte af te drukken (plotter, zie `printsAtActualSize`). */
+  opts: { printScalingNone?: boolean } = {},
+): Uint8Array<ArrayBuffer> {
   if (pages.length === 0) throw new Error('buildImagePdf: minstens één pagina vereist');
 
   const header = asciiBytes('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
@@ -122,7 +126,8 @@ export function buildImagePdf(pages: PdfImagePage[]): Uint8Array<ArrayBuffer> {
   }
 
   // Object 1: Catalog.
-  pushObject(1, [asciiBytes('<< /Type /Catalog /Pages 2 0 R >>')]);
+  const viewerPrefs = opts.printScalingNone ? ' /ViewerPreferences << /PrintScaling /None >>' : '';
+  pushObject(1, [asciiBytes(`<< /Type /Catalog /Pages 2 0 R${viewerPrefs} >>`)]);
 
   // Object 2: Pages — verwijst naar alle Page-objecten.
   const kids = pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ');

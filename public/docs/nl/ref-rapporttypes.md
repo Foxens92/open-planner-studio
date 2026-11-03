@@ -20,9 +20,9 @@ Open het tabblad *Rapport* (of druk op Ctrl+P). Links staat de kolom *Rapportage
 
 ## Papier en oriëntatie
 
-**Papier:** — het papierformaat van de PDF. Keuze uit A4, A3, A2 en A1. Standaard: A3. Effect: de pagina's worden voor dat formaat opgelegd. Er is één keuze voor alle rapporten: wat je bij het ene rapport kiest, geldt ook voor de andere. Op A4 staand wordt een brede tabel klein, want de tabel wordt op de paginabreedte geschaald. Waar: *Instellingen* (Gantt-afdruk en Resourcediagram) of *Rapportopties* (de zeven tabelrapporten). Het Mijlpalen-overzicht en de Variance tonen geen keuzes.
+**Papier:** — het papierformaat van de PDF. Keuze uit A4, A3, A2, A1, A0 en *Rol 914 mm*. Standaard: A3. Effect: de pagina's worden voor dat formaat opgelegd. *Rol 914 mm* is voor een plotter met een rol van 914 mm: de PDF krijgt één doorlopende band zo breed als de rol en zo lang als de inhoud, tot 5,08 m per pagina; wat langer is loopt door op een volgende pagina. Bij A0 en de rol vraagt de PDF het afdrukprogramma om op ware grootte af te drukken; zet *Passend maken* in de afdrukdialoog toch uit als je programma dat negeert. Er is één keuze voor alle rapporten: wat je bij het ene rapport kiest, geldt ook voor de andere. Op A4 staand wordt een brede tabel klein, want de tabel wordt op de paginabreedte geschaald. Waar: *Instellingen* (Gantt-afdruk en Resourcediagram) of *Rapportopties* (de zeven tabelrapporten). Het Mijlpalen-overzicht en de Variance tonen geen keuzes.
 
-**Oriëntatie:** — liggend of staand. Keuze uit *Liggend* en *Staand*. Standaard: *Liggend*. Effect: zoals *Papier:*. Waar: dezelfde plek als *Papier:*.
+**Oriëntatie:** — liggend of staand. Keuze uit *Liggend* en *Staand*. Standaard: *Liggend*. Effect: zoals *Papier:*. Bij *Rol 914 mm* kies je hier de richting van de band. *Staand*: de tijdlijn ligt over de rolbreedte en de band wordt zo lang als de takenlijst. *Liggend*: de takenlijst ligt over de rolbreedte en de band loopt mee met de tijdlijn; *Auto-fit op papier* verdwijnt dan en de lengte volgt *Zoom:*. Waar: dezelfde plek als *Papier:*.
 
 ## Gantt-afdruk
 

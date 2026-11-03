@@ -44,6 +44,9 @@ export function computePreviewRasterLimits(
   cssPageWidth = 900,
   devicePixelRatio = 1,
   quality: PreviewQuality = 2,
+  /** Werkelijke paginamaat in punten (honoreert oriëntatie) uit `computeTileLayout`. Nodig voor
+   *  rolpapier, waar de lengte uit de inhoud volgt; zonder waarde geldt de vaste papiermaat. */
+  pageSizePt?: { width: number; height: number },
 ): PreviewRasterLimits {
   // De parameters blijven deel van het pure publieke contract; de page-local route rekent bewust
   // niet op rapportafmetingen.
@@ -55,8 +58,8 @@ export function computePreviewRasterLimits(
   const budget = PREVIEW_QUALITY_RASTER_BUDGETS[qualityFactor];
 
   const paper = PAPER_PT[paperSize];
-  const pageWidth = orientation === 'landscape' ? paper.height : paper.width;
-  const pageHeight = orientation === 'landscape' ? paper.width : paper.height;
+  const pageWidth = pageSizePt?.width ?? (orientation === 'landscape' ? paper.height : paper.width);
+  const pageHeight = pageSizePt?.height ?? (orientation === 'landscape' ? paper.width : paper.height);
   const density = PREVIEW_QUALITY_DENSITIES[qualityFactor];
   // Rond eerst de leesbare basispagina af en schaal daarna beide rasterassen. Daardoor is de
   // kwaliteitsladder stabiel in hele pixels: A3-landscape bij 900 CSS-px wordt 900×636,

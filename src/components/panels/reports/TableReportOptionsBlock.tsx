@@ -7,7 +7,7 @@ import {
 } from '@/utils/reportSettings';
 import type { ResourceLoadingBucket } from '@/engine/reports';
 import { ReportingPeriodField } from './ReportingPeriodField';
-import { OrientationSelect, PaperSizeSelect, ReportCheckRow, ReportFieldRow, ReportOptionsCard } from './reportFormPrimitives';
+import { OrientationSelect, PaperSizeSelect, ReportCheckRow, ReportFieldRow, ReportOptionsCard, RollPaperHint } from './reportFormPrimitives';
 
 /**
  * Optieblok van de tabelrapporten: per rapporttype alleen de knoppen die dat
@@ -182,6 +182,7 @@ export function TableReportOptionsBlock({ reportType, options, onChange, paperSi
             <label className="text-text-secondary" htmlFor="report-opt-orientation">{t('orientation')}</label>
             <OrientationSelect id="report-opt-orientation" className="w-full min-w-0" value={orientation} onChange={onOrientation} />
           </div>
+          <RollPaperHint paperSize={paperSize} orientation={orientation} />
         </div>
         {body}
       </div>

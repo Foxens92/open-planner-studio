@@ -37,17 +37,64 @@
  * module gedragsneutraal voor aanroepers die niets meegeven.
  */
 
-export type PaperSize = 'a4' | 'a3' | 'a2' | 'a1';
+export type PaperSize = 'a4' | 'a3' | 'a2' | 'a1' | 'a0' | 'roll914';
 export type Orientation = 'portrait' | 'landscape';
 export type PaginateMode = 'fit-width' | 'actual';
 
-/** Paginamaten in PDF-punten (1/72 inch), portret; landscape = omgewisseld. */
+/**
+ * Grootste paginalengte in PDF-punten: 200 inch (5,08 m). Daarboven weigeren gangbare lezers
+ * (Acrobat) de pagina of schalen ze hem stil; een rol die langer zou worden loopt over op een
+ * volgende pagina van dezelfde rol.
+ */
+export const MAX_PAGE_LENGTH_PT = 14_400;
+
+/** Rolbreedte van de plotterrol in punten: 914 mm (36 inch). */
+export const ROLL_914_WIDTH_PT = (914 / 25.4) * 72;
+
+/**
+ * Paginamaten in PDF-punten (1/72 inch), portret; landscape = omgewisseld. Voor een rol is
+ * `width` de rolbreedte en `height` de grootste lengte: de werkelijke lengte volgt uit de inhoud
+ * (zie {@link isRollPaper} en `computeTileLayout`).
+ */
 export const PAPER_PT: Record<PaperSize, { width: number; height: number }> = {
   a4: { width: 595.28, height: 841.89 },
   a3: { width: 841.89, height: 1190.55 },
   a2: { width: 1190.55, height: 1683.78 },
   a1: { width: 1683.78, height: 2383.94 },
+  a0: { width: 2383.94, height: 3370.39 },
+  roll914: { width: ROLL_914_WIDTH_PT, height: MAX_PAGE_LENGTH_PT },
 };
+
+/** Van de rapportinstelling (`'A3'`, `'ROLL914'`) naar de pagineerdersleutel. */
+export function toPaperSize(reportPaper: string): PaperSize {
+  return reportPaper.toLowerCase() as PaperSize;
+}
+
+/**
+ * Grote formaten gaan naar een plotter, waar een "passend maken" in de afdrukdialoog de schaal
+ * van de planning stil verandert. Voor deze formaten vraagt de PDF de lezer om op ware grootte
+ * af te drukken (`/ViewerPreferences << /PrintScaling /None >>`). De vellen A4..A1 houden het
+ * standaardgedrag van de lezer: daar drukt men vaak bewust kleiner af.
+ */
+export function printsAtActualSize(paperSize: PaperSize): boolean {
+  return paperSize === 'a0' || isRollPaper(paperSize);
+}
+
+/** Rolpapier: vaste rolbreedte, lengte naar inhoud (één doorlopende band). */
+export function isRollPaper(paperSize: PaperSize): boolean {
+  return paperSize === 'roll914';
+}
+
+/**
+ * Een rol in landscape legt de rolbreedte als paginaHOOGTE: de band loopt dan in de tijdrichting
+ * door en de tijdlijn bepaalt de lengte. Er is dan geen vaste paginabreedte om de tijdlijn op te
+ * passen, dus Auto-fit geldt niet: de tijdlijn volgt de handmatige zoom (px per dag) en de
+ * pagineerder rekent in `'actual'`-modus. In portret is de rolbreedte de paginabreedte en werkt
+ * Auto-fit zoals op een vel.
+ */
+export function rollRunsAlongTimeline(paperSize: PaperSize, orientation: Orientation): boolean {
+  return isRollPaper(paperSize) && orientation === 'landscape';
+}
 
 /** Standaard witruimte rond een rapportpagina, in PDF-punten. */
 export const DEFAULT_MARGIN_PT = 24;
@@ -252,13 +299,19 @@ const MIN_BREAK_FILL = 0.5;
 export function computeTileLayout(input: TileLayoutInput): TileLayout {
   const marginPt = input.marginPt ?? DEFAULT_MARGIN_PT;
   const frozenRequestedPx = Math.max(0, input.frozenColumnWidthPx ?? 0);
+  // Rol langs de tijdlijn: geen vaste paginabreedte om op te passen ⇒ altijd 'actual' (zie
+  // `rollRunsAlongTimeline`). De rest van de functie rekent met deze effectieve modus.
+  const alongTimeline = rollRunsAlongTimeline(input.paperSize, input.orientation);
+  const mode: PaginateMode = alongTimeline ? 'actual' : input.mode;
+  const roll = isRollPaper(input.paperSize);
 
   const base = PAPER_PT[input.paperSize];
-  const pageWidthPt = input.orientation === 'landscape' ? base.height : base.width;
-  const pageHeightPt = input.orientation === 'landscape' ? base.width : base.height;
+  // Bij een rol is de lange as eerst de GROOTSTE lengte; onderaan wordt hij tot de inhoud ingekort.
+  let pageWidthPt = input.orientation === 'landscape' ? base.height : base.width;
+  let pageHeightPt = input.orientation === 'landscape' ? base.width : base.height;
 
-  const printW = pageWidthPt - 2 * marginPt;
-  const printH = pageHeightPt - 2 * marginPt - PAGE_NUMBER_PT;
+  let printW = pageWidthPt - 2 * marginPt;
+  let printH = pageHeightPt - 2 * marginPt - PAGE_NUMBER_PT;
 
   // Bron-afmetingen in LOGISCHE px — alle tegel-wiskunde gebeurt in deze eenheid.
   //
@@ -293,7 +346,7 @@ export function computeTileLayout(input: TileLayoutInput): TileLayout {
   // De `cw > 0`-guard is een degeneratie-vangnet: bij een lege bron zou de deling Infinity opleveren
   // en `rows`/`cols` naar oneindig laten lopen (= vastloper). Echte renders hebben altijd cw > 0.
   let scale: number;
-  if (input.mode === 'fit-width') {
+  if (mode === 'fit-width') {
     const virtualWidth = cw + (timelineCols - 1) * frozenRequestedPx;
     scale = virtualWidth > 0 ? (printW * timelineCols) / virtualWidth : 1;
   } else {
@@ -306,7 +359,7 @@ export function computeTileLayout(input: TileLayoutInput): TileLayout {
   // fit-width-export met timelineColumns > 1. In 'actual' kennen we `cols` pas ná deze berekening (hij
   // hangt van `frozenPtW` af), dus daar rekenen we de strip-breedte onvoorwaardelijk uit; blijft het
   // toch bij één kolom, dan wordt `frozenPtW` simpelweg nergens gebruikt (kolom 0 herhaalt niets).
-  const repeatsFrozen = input.mode === 'actual' || timelineCols > 1;
+  const repeatsFrozen = mode === 'actual' || timelineCols > 1;
   const frozenPx = repeatsFrozen ? frozenRequestedPx : 0;
   const frozenPtW = frozenPx * scale;
 
@@ -316,7 +369,7 @@ export function computeTileLayout(input: TileLayoutInput): TileLayout {
   const laterColBodypx = (printW - frozenPtW) / scale;
 
   let cols: number;
-  if (input.mode === 'fit-width') {
+  if (mode === 'fit-width') {
     cols = timelineCols;
   } else if (cw > col0Bodypx && laterColBodypx > 0) {
     cols = 1 + Math.ceil((cw - col0Bodypx) / laterColBodypx);
@@ -400,6 +453,35 @@ export function computeTileLayout(input: TileLayoutInput): TileLayout {
   }
   const rows = bodyRows.length;
 
+  // ---- Rol: de lange as inkorten tot de inhoud -------------------------------------------------
+  //
+  // Tot hier rekende een rol met de grootste lengte als paginamaat, zodat de tegeling (aantal
+  // pagina's, breekposities) exact die van een vel met die maat is. Nu krijgt de lange as de maat
+  // van de grootste tegel: past alles op één rol-pagina, dan is dat precies de inhoud (één
+  // doorlopende band zonder wit eronder of ernaast). Alle pagina's van één PDF delen in dit model
+  // één maat; loopt een band over de grootste lengte heen, dan krijgt elke pagina die van de
+  // grootste tegel. De vensters hieronder hangen alleen van `printW`/`scale` vóór het inkorten af,
+  // de vaste offsets (`pageX`, `bodyTopPt`) van de marge — die blijven geldig.
+  const bodyPrintW = printW;
+  if (roll && !alongTimeline) {
+    const tallestBodyPx = bodyRows.reduce((max, r) => Math.max(max, r.srcH), 0);
+    const usedH = (repeatHeaderPx + tallestBodyPx + repeatFooterPx) * scale;
+    printH = Math.min(printH, usedH);
+    pageHeightPt = printH + 2 * marginPt + PAGE_NUMBER_PT;
+  } else if (alongTimeline) {
+    let widest = 0;
+    for (let c = 0; c < cols; c++) {
+      if (c === 0) {
+        widest = Math.max(widest, Math.min(col0Bodypx, cw) * scale);
+      } else {
+        const bodySrcX = col0Bodypx + (c - 1) * laterColBodypx;
+        widest = Math.max(widest, frozenPtW + Math.max(0, Math.min(laterColBodypx, cw - bodySrcX)) * scale);
+      }
+    }
+    printW = Math.min(printW, widest);
+    pageWidthPt = printW + 2 * marginPt;
+  }
+
   // ---- Horizontale vensters per kolom -----------------------------------------------------------
   const columns: TileColumn[] = [];
   for (let c = 0; c < cols; c++) {
@@ -441,8 +523,10 @@ export function computeTileLayout(input: TileLayoutInput): TileLayout {
     repeatFooterPx,
     repeatFooterPtH,
     repeatFooterSrcY,
-    footerWindow: { srcX: 0, srcW: Math.min(col0Bodypx, cw), pageX: marginPt },
-    footerLayoutWidthPx: col0Bodypx,
+    footerWindow: { srcX: 0, srcW: Math.min(col0Bodypx, cw, printW / scale), pageX: marginPt },
+    // Na het inkorten van een rol langs de tijdlijn is de pagina smaller dan `bodyPrintW`: de voet
+    // hoort dan binnen de werkelijke paginabreedte te liggen.
+    footerLayoutWidthPx: printW < bodyPrintW ? printW / scale : col0Bodypx,
     bodyTopPt: marginPt + repeatHeaderPtH,
     footerTopPt: marginPt + printH - repeatFooterPtH,
     columns,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select } from '@/components/common/Select';
-import type { ReportOrientation, ReportPaperSize } from '@/utils/reportSettings';
+import { PAPER_SIZES, type ReportOrientation, type ReportPaperSize } from '@/utils/reportSettings';
 
 // Bouwstenen van de instellingenkaarten op het Rapport-tabblad: het Gantt-/resourcediagramblok in
 // `ReportPanel` en het optieblok van de tabelrapporten delen dezelfde kaart, rijen en keuzelijsten.
@@ -60,8 +60,6 @@ export function ReportCheckRow({ checked, onChange, label, spaced = false, input
   );
 }
 
-const PAPER_OPTIONS = (['A4', 'A3', 'A2', 'A1'] as const).map(p => ({ value: p, label: p }));
-
 export function PaperSizeSelect({ id, className, value, onChange }: {
   id?: string;
   className: string;
@@ -69,6 +67,7 @@ export function PaperSizeSelect({ id, className, value, onChange }: {
   onChange: (paper: ReportPaperSize) => void;
 }) {
   const { t } = useTranslation('report');
+  const options = PAPER_SIZES.map(p => ({ value: p, label: p === 'ROLL914' ? t('paperRoll914') : p }));
   return (
     <Select
       id={id}
@@ -76,8 +75,22 @@ export function PaperSizeSelect({ id, className, value, onChange }: {
       aria-label={t('paper')}
       value={value}
       onChange={v => onChange(v as ReportPaperSize)}
-      options={PAPER_OPTIONS}
+      options={options}
     />
+  );
+}
+
+/**
+ * Uitleg onder papier/oriëntatie zodra de plotterrol gekozen is: de oriëntatie bepaalt dan in
+ * welke richting de band doorloopt (zie `rollRunsAlongTimeline` in `tileLayout.ts`).
+ */
+export function RollPaperHint({ paperSize, orientation }: { paperSize: ReportPaperSize; orientation: ReportOrientation }) {
+  const { t } = useTranslation('report');
+  if (paperSize !== 'ROLL914') return null;
+  return (
+    <span className="text-text-secondary" data-ops-report-roll-hint={orientation}>
+      {orientation === 'landscape' ? t('rollHintAlongTimeline') : t('rollHintAcrossTimeline')}
+    </span>
   );
 }
 

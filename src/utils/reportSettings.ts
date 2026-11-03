@@ -169,7 +169,8 @@ export const TABLE_REPORT_LIMITS = {
   lagDays: { min: 0, max: 365 },
   wbsLevel: { min: 0, max: 8 },
 } as const;
-export type ReportPaperSize = 'A4' | 'A3' | 'A2' | 'A1';
+/** `ROLL914` = plotterrol van 914 mm, één doorlopende band (lengte naar inhoud). */
+export type ReportPaperSize = 'A4' | 'A3' | 'A2' | 'A1' | 'A0' | 'ROLL914';
 export type ReportOrientation = 'landscape' | 'portrait';
 /** Alleen de rasterkwaliteit van de live preview; heeft bewust geen invloed op rapport/PDF-layout. */
 export type ReportPreviewQuality = '100' | '200' | '300';
@@ -244,7 +245,7 @@ export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
 
 /** Toegestane waarden voor de keuzelijsten — 1-op-1 met de opties in `ReportPanel`. */
 const REPORT_TYPES: readonly ReportType[] = ['gantt', 'resourceGantt', 'milestones', 'variance', ...TABLE_REPORT_TYPES];
-const PAPER_SIZES: readonly ReportPaperSize[] = ['A4', 'A3', 'A2', 'A1'];
+export const PAPER_SIZES: readonly ReportPaperSize[] = ['A4', 'A3', 'A2', 'A1', 'A0', 'ROLL914'];
 const ORIENTATIONS: readonly ReportOrientation[] = ['landscape', 'portrait'];
 const STATUS_LINES: readonly ReportSettings['statusLine'][] = ['none', 'statusDate', 'progress'];
 const PREVIEW_QUALITIES: readonly ReportPreviewQuality[] = ['100', '200', '300'];

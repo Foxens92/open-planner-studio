@@ -10,7 +10,7 @@ import { documentProjectCode } from '@/utils/documentProjectCode';
 import { nameWithProjectCode } from '@/utils/projectCodeName';
 import { computeHighResScale } from '@/utils/miniPdf';
 import { paginateCanvasToPdfBytes, type PaginateOptions } from '@/services/print/paginate';
-import { computeTileLayout, footerLayoutWidthFor } from '@/services/print/tileLayout';
+import { computeTileLayout, footerLayoutWidthFor, rollRunsAlongTimeline, toPaperSize } from '@/services/print/tileLayout';
 import { ensureInterLoaded, getInterFontBytes, getArabicFontBytes } from '@/services/pdf/fontLoader';
 import { RTL_LOCALES, type Locale } from '@/i18n/config';
 import { Select } from '@/components/common/Select';
@@ -25,7 +25,7 @@ import { saveBytesDialog } from '@/services/fileAccess';
 import {
   DEFAULT_REPORT_SETTINGS, isGanttReportType, loadReportSettings, reportTypeDrawsRelations, reportTypeShowsCriticalToggle, saveReportSettings,
   TABLE_REPORT_TYPES,
-  type ReportType, type ResourceGanttReportOptions, type TableReportOptions,
+  type ReportPaperSize, type ReportType, type ResourceGanttReportOptions, type TableReportOptions,
 } from '@/utils/reportSettings';
 import { computeResourceGanttRows } from '@/engine/reports';
 import { countCriticalActivities } from '@/engine/scheduler/scheduleAnalysis';
@@ -34,7 +34,7 @@ import type { ViewRow } from '@/engine/view/visibleRows';
 import { TableReportView } from './reports/TableReportView';
 import { ReportingPeriodField, useResolvedPeriod } from './reports/ReportingPeriodField';
 import { TableReportOptionsBlock } from './reports/TableReportOptionsBlock';
-import { OrientationSelect, PaperSizeSelect, ReportCheckRow, ReportFieldRow, ReportOptionsCard } from './reports/reportFormPrimitives';
+import { OrientationSelect, PaperSizeSelect, ReportCheckRow, ReportFieldRow, ReportOptionsCard, RollPaperHint } from './reports/reportFormPrimitives';
 import { useTableReportSpec } from './reports/useTableReportSpec';
 import { toPdfSpec } from './reports/tableReportSpec';
 import { useTaskIdDateText, type TaskIdDateText } from '@/hooks/displayDate';
@@ -332,11 +332,15 @@ export function ReportPanel() {
   const [showBaselineOverlay, setShowBaselineOverlay] = useState(DEFAULT_REPORT_SETTINGS.showBaselineOverlay);
   const [autoFit, setAutoFit] = useState(DEFAULT_REPORT_SETTINGS.autoFit);
   const [customZoom, setCustomZoom] = useState(DEFAULT_REPORT_SETTINGS.customZoom);
-  const [paperSize, setPaperSize] = useState<'A4' | 'A3' | 'A2' | 'A1'>(DEFAULT_REPORT_SETTINGS.paperSize);
+  const [paperSize, setPaperSize] = useState<ReportPaperSize>(DEFAULT_REPORT_SETTINGS.paperSize);
   // Reden waarom de laatste export-poging is afgebroken (alleen een CPM-cyclus).
   // Het CPM-resultaat met de fout, niet de tekst: vertaald bij het tonen, dus ook na een taalwissel.
   const [exportError, setExportError] = useState<Pick<CPMResult, 'error' | 'errorInfo'> | null>(null);
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>(DEFAULT_REPORT_SETTINGS.orientation);
+  // Plotterrol in landscape: de band loopt langs de tijdlijn, dus geen Auto-fit (de keuze zelf blijft
+  // bewaard voor wie terugwisselt naar een vel).
+  const rollAlongTimeline = rollRunsAlongTimeline(toPaperSize(paperSize), orientation);
+  const effectiveAutoFit = autoFit && !rollAlongTimeline;
   // Bewust NIET persistent: de bedrijfsnaam komt uit het PROJECT (`project.company`). Zie de
   // toelichting bovenin `src/utils/reportSettings.ts` — globaal bewaren zou het bedrijf van het ene
   // project in het rapport van het andere laten opduiken.
@@ -834,12 +838,7 @@ export function ReportPanel() {
         assignmentColumnsDropped: columnsDropped,
       } = measurePrintReport(tasks, sequences, calendar, projectName, options);
       setAssignmentColumnsDropped(!!columnsDropped);
-      const lowerPaper = options.paperSize.toLowerCase() as 'a4' | 'a3' | 'a2' | 'a1';
-      const cssPageWidth = previewCssWidth;
-      const previewLimits = computePreviewRasterLimits(
-        logicalWidth, logicalHeight, lowerPaper, options.orientation, cssPageWidth, window.devicePixelRatio,
-        PREVIEW_QUALITY_FACTORS[previewQuality],
-      );
+      const lowerPaper = toPaperSize(options.paperSize);
       const tileOptions = {
         paperSize: lowerPaper,
         orientation: options.orientation,
@@ -856,9 +855,15 @@ export function ReportPanel() {
         // het resourcediagram ook zijn gedwongen overgangen per resource.
         breakOffsetsPx: breakOffsets,
         forcedBreakOffsetsPx: forcedBreakOffsets,
-        supersample: previewLimits.pageSupersample,
       };
       const layout = computeTileLayout(tileOptions);
+      const cssPageWidth = previewCssWidth;
+      const previewLimits = computePreviewRasterLimits(
+        logicalWidth, logicalHeight, lowerPaper, options.orientation, cssPageWidth, window.devicePixelRatio,
+        PREVIEW_QUALITY_FACTORS[previewQuality],
+        // De echte paginamaat uit de layout: bij een rol volgt de lengte uit de inhoud.
+        { width: layout.pageWidthPt, height: layout.pageHeightPt },
+      );
       // De herhaalde voet wordt binnen één paginabreedte gelegd (meerdere kolommen ⇒ compleet op elk
       // vel); zonder herhaling ligt de voet over de volle canvasbreedte.
       const pageOptions: PrintOptions = { ...options, footerLayoutWidth: footerLayoutWidthFor(layout) };
@@ -1087,7 +1092,7 @@ export function ReportPanel() {
     }
     setExportError(null);
 
-    const lowerPaper = paperSize.toLowerCase() as 'a4' | 'a3' | 'a2' | 'a1';
+    const lowerPaper = toPaperSize(paperSize);
     // Basisrichting van de export-taal: stuurt de bidi in het complexe RTL-tekst-pad van de vector-export.
     const exportBaseDir: 'ltr' | 'rtl' =
       RTL_LOCALES.includes((options.locale ?? '') as Locale) ? 'rtl' : 'ltr';
@@ -1097,7 +1102,8 @@ export function ReportPanel() {
     await ensureInterLoaded();
 
     if (isGanttLike) {
-      const mode = autoFit ? 'fit-width' : 'actual';
+      // Een rol langs de tijdlijn rekent altijd in 'actual' (zie `rollRunsAlongTimeline`).
+      const mode = autoFit && !rollRunsAlongTimeline(lowerPaper, orientation) ? 'fit-width' : 'actual';
 
       // De raster-tak (JPEG-tegels) als betrouwbare terugval: de vector-tak valt erop terug bij een
       // fout (bv. een glyph buiten Inter). Render offscreen op een vaste hoge schaal, onafhankelijk van het
@@ -1460,6 +1466,7 @@ export function ReportPanel() {
             <ReportFieldRow label={t('orientation')}>
               <OrientationSelect className="flex-1 min-w-0" value={orientation} onChange={setOrientation} />
             </ReportFieldRow>
+            <RollPaperHint paperSize={paperSize} orientation={orientation} />
 
             {/* Lettergrootte van het rapport. Relatief bedoeld: bij een grotere
                 letter groeien tekst, rijen en tabel op het vel en levert de tijdlijn breedte in. */}
@@ -1572,16 +1579,19 @@ export function ReportPanel() {
               </>
             )}
 
-            {/* Auto-fit checkbox */}
-            <ReportCheckRow
-              spaced
-              checked={autoFit}
-              onChange={setAutoFit}
-              label={t('autoFit', { defaultValue: 'Auto-fit op papier' })}
-            />
+            {/* Auto-fit checkbox. Een rol langs de tijdlijn heeft geen vaste breedte om op te
+                passen: dan geen Auto-fit maar altijd de zoom (zie `rollRunsAlongTimeline`). */}
+            {!rollAlongTimeline && (
+              <ReportCheckRow
+                spaced
+                checked={autoFit}
+                onChange={setAutoFit}
+                label={t('autoFit', { defaultValue: 'Auto-fit op papier' })}
+              />
+            )}
 
             {/* Custom zoom slider (only when auto-fit is off) */}
-            {!autoFit && (
+            {!effectiveAutoFit && (
               <ReportFieldRow label={t('zoom', { defaultValue: 'Zoom:' })}>
                 <input
                   type="range"
@@ -1604,14 +1614,14 @@ export function ReportPanel() {
                 aria-label={t('timelineColumnsLabel')}
                 value={String(timelineColumns)}
                 onChange={v => setTimelineColumns(Number(v))}
-                disabled={!autoFit}
+                disabled={!effectiveAutoFit}
                 options={[1, 2, 3, 4, 5, 6, 7, 8].map(n => ({
                   value: String(n),
                   label: t('timelineColumns', { count: n }),
                 }))}
               />
             </ReportFieldRow>
-            {!autoFit && (
+            {!effectiveAutoFit && (
               <span className="text-text-secondary">{t('timelineColumnsHint')}</span>
             )}
 

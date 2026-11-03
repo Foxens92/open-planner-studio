@@ -20,9 +20,9 @@ Open the *Report* tab (or press Ctrl+P). On the left is the *Report* column with
 
 ## Paper and orientation
 
-**Paper:** — the paper size of the PDF. Choose from A4, A3, A2 and A1. Default: A3. Effect: the pages are laid out for that size. There is one choice for all reports: what you choose for one report also holds for the others. On portrait A4 a wide table gets small, because the table is scaled to the page width. Where: *Settings* (Gantt chart and Resource diagram) or *Report options* (the seven table reports). The Milestone overview and the Variance show no choices.
+**Paper:** — the paper size of the PDF. Choose from A4, A3, A2, A1, A0 and *Roll 914 mm*. Default: A3. Effect: the pages are laid out for that size. *Roll 914 mm* is for a plotter with a 914 mm roll: the PDF gets one continuous band as wide as the roll and as long as the content, up to 5.08 m per page; anything longer continues on a next page. For A0 and the roll the PDF asks the print program to print at actual size; still turn off *Fit to page* in the print dialog if your program ignores that. There is one choice for all reports: what you choose for one report also holds for the others. On portrait A4 a wide table gets small, because the table is scaled to the page width. Where: *Settings* (Gantt chart and Resource diagram) or *Report options* (the seven table reports). The Milestone overview and the Variance show no choices.
 
-**Orientation:** — landscape or portrait. Choose from *Landscape* and *Portrait*. Default: *Landscape*. Effect: like *Paper:*. Where: the same place as *Paper:*.
+**Orientation:** — landscape or portrait. Choose from *Landscape* and *Portrait*. Default: *Landscape*. Effect: like *Paper:*. With *Roll 914 mm* this sets the direction of the band. *Portrait*: the timeline spans the roll width and the band is as long as the task list. *Landscape*: the task list spans the roll width and the band runs along the timeline; *Auto-fit to paper* then disappears and the length follows *Zoom:*. Where: the same place as *Paper:*.
 
 ## Gantt chart
 

@@ -8,7 +8,8 @@ import type { DateNotation, DurationDisplay, TimeNotation } from '@/types/view';
 import type { Draw2D } from '@/services/pdf/draw2d';
 import { CanvasDraw2D } from '@/services/pdf/canvasDraw2d';
 import { DEFAULT_REPORT_FONT_STACK } from '@/services/pdf/reportFont';
-import { printableWidthLogicalPx, type TileLayout } from '@/services/print/tileLayout';
+import { printableWidthLogicalPx, rollRunsAlongTimeline, toPaperSize, type TileLayout } from '@/services/print/tileLayout';
+import type { ReportPaperSize } from '@/utils/reportSettings';
 // Print-vriendelijk kleurschema uit het centrale themapalet.
 import { PRINT_PALETTE as PRINT_COLORS, doneBarTones } from '@/engine/renderer/themePalette';
 import { isCompressedEffective, resolveGanttAxis } from '@/engine/renderer/workdayAxis';
@@ -615,7 +616,7 @@ export interface PrintOptions {
   showBaselineOverlay?: boolean;
   autoFit: boolean;
   customZoom: number;
-  paperSize: 'A4' | 'A3' | 'A2' | 'A1';
+  paperSize: ReportPaperSize;
   orientation: 'landscape' | 'portrait';
   companyName: string;
   labels?: {
@@ -972,10 +973,8 @@ export function renderReport(
   // rechtstreeks (zie {@link ReportMetrics} voor het waarom van relatief-schalen).
   // Bronbreedte van één papierbreedte (zie de uitleg bij `availableChartWidth` verderop); hier al
   // nodig om te beslissen of de toewijzingskolommen erbij passen.
-  const printableWidth = printableWidthLogicalPx(
-    options.paperSize.toLowerCase() as 'a4' | 'a3' | 'a2' | 'a1',
-    options.orientation,
-  );
+  const paper = toPaperSize(options.paperSize);
+  const printableWidth = printableWidthLogicalPx(paper, options.orientation);
   let assignmentColumns = !!options.assignmentColumns;
   let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily);
   let assignmentColumnsDropped = false;
@@ -1097,7 +1096,9 @@ export function renderReport(
   const availableChartWidth = Math.max(1, printableWidth - m.tableWidth) * timelineColumns;
 
   let zoom: number;
-  if (options.autoFit && timelineDays > 0) {
+  // Een rol langs de tijdlijn heeft geen vaste breedte om op te passen: dan geldt de handmatige
+  // zoom (zie `rollRunsAlongTimeline`).
+  if (options.autoFit && timelineDays > 0 && !rollRunsAlongTimeline(paper, options.orientation)) {
     zoom = availableChartWidth / timelineDays;
   } else {
     zoom = options.customZoom || 22;
