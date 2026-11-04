@@ -372,6 +372,11 @@ bridge tests against the real Rust bridge). Docs: `docs/release-verificatie.md`,
   owner's separate request. The job repairs a red CI itself (owner decision 8; route in the `ci-release` rule).
   The schedule and literal job prompt live in `.claude/skills/release/scheduled-job.md`.
   Release text in `docs/release-notes/v<version>.md`; `docs/CHANGELOG.md` only at release.
+- **This fork (Foxens92) has its own update channel.** The updater endpoint in `src-tauri/tauri.conf.json`
+  and `GITHUB_REPO` (`src/services/githubRepo.ts`) point to `Foxens92/open-planner-studio`; macOS updates are
+  signed with the owner's key and published by hand as `mac-v<version>` releases
+  (`scripts/mac-update-key.sh`, `scripts/publish-mac-update.sh`, `docs/mises-a-jour-fork.md`). Never point them
+  back to OpenAEC, and never put a private signing key in the repo.
 - The user term is "resourcebibliotheek"; code/IFC still say `companyId`/`companyName`.
 - Screen evidence in a PR: `artifacts/<topic>/`, PNG ≤ ~150 KB, a handful; local QA screenshots in `qa/`.
 - Changing the architecture, a command or a fact above? Update this file in the same PR.
