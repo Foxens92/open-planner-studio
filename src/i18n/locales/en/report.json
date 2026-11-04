@@ -157,6 +157,7 @@
   "statusLine_progress": "Progress line",
   "statusLineHint": "Set a status date first",
   "followView": "Follow view (filter, grouping, sort)",
+  "ganttPeriod": "Print period:",
   "statusDateLabel": "Status date",
   "progressDateLabel": "Progress date",
   "resourceGantt": {

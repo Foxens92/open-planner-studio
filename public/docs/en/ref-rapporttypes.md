@@ -40,6 +40,8 @@ The schedule as a bar chart, with a table on the left and a timeline on the righ
 
 **Follow view (filter, grouping, sort)** — only for the Gantt chart. Default: off. Effect: off puts the whole task tree on paper. On draws exactly the rows of the screen: with your filter, grouping, sorting and collapsed phases.
 
+**Print period:** — only for the Gantt chart: the part of the timeline that goes on paper. Default: *Project duration*. Effect: the time axis runs exactly from *From* through *To*. All tasks keep their row in the table; a bar that runs past the edge is cut off there, and a task outside the period has no bar. Relation arrows are cut off at the edge. The same choices as the *Reporting period*, see below.
+
 **Auto-fit to paper** — scale the timeline to the page width. Default: on. Effect: on scales the timeline to the width of the page; the number of pages follows from the height. Off uses a fixed scale (*Zoom:*) and also tiles across the width, which quickly gives many pages.
 
 **Zoom:** — the fixed scale of the timeline. Only visible when *Auto-fit to paper* is off. Slider from 1 to 40. Default: 22. Effect: a larger value makes the timeline wider, so more pages across.
@@ -213,7 +215,7 @@ The columns include *WBS*, *Name*, *Start*, *Finish*, *Baseline start*, *Baselin
 
 ## Reporting period
 
-Four table reports and the Resource diagram work with a *Reporting period:*: *Look-ahead*, *Progress report*, *Resource loading*, *Resource assignments* and the *Resource diagram*. Each report remembers its own period. Below the drop-down are *From* and *To*, with the dates the choice produces.
+Four table reports and the Resource diagram work with a *Reporting period:*: *Look-ahead*, *Progress report*, *Resource loading*, *Resource assignments* and the *Resource diagram*. The Gantt chart has the same choice under the name *Print period:*. Each report remembers its own period. Below the drop-down are *From* and *To*, with the dates the choice produces.
 
 **Reference day.** A period with *Next* or *Last* counts from the status date of the project, or from today if there is no status date. Then the table reports say *No status date set — the report uses today (…).* If you move the status date, the window moves along. Both days count.
 

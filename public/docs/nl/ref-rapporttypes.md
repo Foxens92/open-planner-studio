@@ -40,6 +40,8 @@ De planning als balkenplan, met een tabel links en een tijdlijn rechts, over mee
 
 **Volg weergave (filter, groepering, sortering)** — alleen bij de Gantt-afdruk. Standaard: uit. Effect: uit neemt de hele takenboom op papier. Aan tekent precies de rijen van het scherm: met je filter, groepering, sortering en ingeklapte fasen.
 
+**Afdrukperiode:** — alleen bij de Gantt-afdruk: het stuk van de tijdlijn dat op papier komt. Standaard: *Hele project*. Effect: de tijdas loopt exact van *Van* tot en met *Tot*. Alle taken houden hun rij in de tabel; een balk die over de rand loopt wordt daar afgekapt, en een taak buiten de periode heeft geen balk. Relatiepijlen worden op de rand afgekapt. Dezelfde keuzes als de *Rapportageperiode*, zie verderop.
+
 **Auto-fit op papier** — de tijdlijn op de paginabreedte schalen. Standaard: aan. Effect: aan schaalt de tijdlijn op de breedte van de pagina; het aantal pagina's volgt uit de hoogte. Uit gebruikt een vaste schaal (*Zoomen:*) en tegelt ook in de breedte, wat snel veel pagina's geeft.
 
 **Zoomen:** — de vaste schaal van de tijdlijn. Alleen zichtbaar als *Auto-fit op papier* uit staat. Schuifregelaar van 1 tot 40. Standaard: 22. Effect: een grotere waarde maakt de tijdlijn breder, dus meer pagina's in de breedte.
@@ -213,7 +215,7 @@ De kolommen zijn onder meer *WBS*, *Naam*, *Start*, *Einde*, *Baseline start*, *
 
 ## Rapportageperiode
 
-Vier tabelrapporten en het Resourcediagram werken met een *Rapportageperiode:*: *Look-ahead*, *Voortgangsrapport*, *Resourcebelasting*, *Resourcetoewijzingen* en het *Resourcediagram*. Elk rapport onthoudt zijn eigen periode. Onder de keuzelijst staan *Van* en *Tot*, met de datums die de keuze oplevert.
+Vier tabelrapporten en het Resourcediagram werken met een *Rapportageperiode:*: *Look-ahead*, *Voortgangsrapport*, *Resourcebelasting*, *Resourcetoewijzingen* en het *Resourcediagram*. De Gantt-afdruk heeft dezelfde keuze onder de naam *Afdrukperiode:*. Elk rapport onthoudt zijn eigen periode. Onder de keuzelijst staan *Van* en *Tot*, met de datums die de keuze oplevert.
 
 **Referentiedag.** Een periode met *Volgende* of *Afgelopen* telt vanaf de statusdatum van het project, of vanaf vandaag als er geen statusdatum is. Dan staat er in de tabelrapporten *Geen statusdatum ingesteld — het rapport rekent met vandaag (…).* Schuif je de statusdatum op, dan schuift het venster mee. Beide dagen tellen mee.
 

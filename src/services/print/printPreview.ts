@@ -669,15 +669,15 @@ export interface PrintOptions {
    */
   timelineColumns?: number;
   /**
-   * OPTIONEEL — rapportageperiode als TIJDVENSTER (resourcediagram): de
+   * OPTIONEEL — rapportageperiode (resourcediagram) of afdrukperiode (Gantt-afdruk) als TIJDVENSTER: de
    * tijdas loopt exact van `from` t/m `to` (ISO-dagen, inclusief) zonder de gebruikelijke marge van
    * 7/14 dagen, en balken, mijlpalen, speling, voortgang en baseline worden op de chartrand
    * afgekapt — `Draw2D` kent geen clip, dus de geometrie zelf wordt geklemd (ook de 3 px-
-   * minimumbreedte van een balk en het middelpunt van een ruit; relatiepijlen worden bij een
-   * venster helemaal niet getekend). Welke rijen in het
-   * venster horen beslist de rijenbron (`computeResourceGanttRows`), niet de render; een rij die
-   * er toch buiten valt tekent gewoon geen balk. Relatiepijlen worden niet geklemd: het venster
-   * wordt alleen aangeboden op het resourcediagram, dat er geen tekent. Afwezig ⇒ geen venster.
+   * minimumbreedte van een balk en het middelpunt van een ruit; relatiepijlen worden per stuk op
+   * de chartrand geknipt via `clipRoute`, een pijlpunt die niet helemaal binnen valt vervalt). Welke
+   * rijen in het venster horen beslist de rijenbron (`computeResourceGanttRows` filtert; de
+   * Gantt-afdruk houdt bewust alle rijen), niet de render; een rij die er buiten valt tekent gewoon
+   * geen balk. Afwezig ⇒ geen venster.
    */
   timeWindow?: { from: string; to: string };
   /**
@@ -1616,9 +1616,10 @@ export function renderReport(
   // In de vector-PDF staat tekst sowieso boven alle vormen (vormen gaan in het gedeelde
   // Form-XObject, tekst wordt daarná per tegel geëmit); deze volgorde brengt de RASTER-preview
   // daarmee in lijn, want die twee horen WYSIWYG te zijn.
-  // Bij een tijdvenster worden relaties nooit getekend: `drawDependencies` klemt niet, en het
-  // venster wordt alleen op het resourcediagram aangeboden, dat sowieso geen relaties tekent.
-  if (options.showDeps && !windowed) {
+  // Bij een tijdvenster (afdrukperiode van de Gantt-afdruk) worden de pijlen op de chartrand
+  // afgekapt: `Draw2D` kent geen clip, dus `drawDependencies` knipt de route zelf. Het
+  // resourcediagram tekent sowieso geen relaties (`reportTypeDrawsRelations`).
+  if (options.showDeps) {
     // Volg-weergave: alleen relaties waarvan béide endpoints een zichtbare rij zijn (zelfde
     // regel als het scherm). rowIndexOf indexeert printRows (groepsbanden meegerekend) en is
     // daarmee tegelijk het zichtbaarheids- én het y-positie-bron; in boom-modus zijn alle taken
@@ -1628,7 +1629,8 @@ export function renderReport(
     printRows.forEach((r, idx) => {
       if (r.kind === 'task' && r.task) { rowIndexOf.set(r.task.id, idx); tasksById.set(r.task.id, r.task); }
     });
-    drawDependencies(d2d, m, tasksById, sequences, dateToX, rowToY, zoom, options, rowIndexOf);
+    drawDependencies(d2d, m, tasksById, sequences, dateToX, rowToY, zoom, options, rowIndexOf,
+      windowed ? [m.tableWidth, canvasWidth] : undefined);
   }
 
   for (const job of barLabelJobs) {
@@ -2471,6 +2473,34 @@ function drawTaskTable(
  * omweg nodig om ze zichtbaar te houden, het rapport tekent ze erBOVEN (zie de tekenvolgorde in
  * `renderReport`) — daar bestaat het occlusieprobleem niet.
  */
+/**
+ * Knip een assenparallelle route (afwisselend horizontale en verticale stukken) op het x-bereik
+ * [lo, hi]. Levert de zichtbare stukken als losse segmenten; een stuk buiten het bereik (of met een
+ * niet-eindig eindpunt, b.v. een taak zonder balk) valt weg. Exporteerd voor de regressietest.
+ */
+export function clipRoute(
+  route: readonly { x: number; y: number }[],
+  lo: number,
+  hi: number,
+): [{ x: number; y: number }, { x: number; y: number }][] {
+  const out: [{ x: number; y: number }, { x: number; y: number }][] = [];
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1];
+    const b = route[i];
+    if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) continue;
+    if (a.x === b.x) {
+      if (a.x >= lo && a.x <= hi && a.y !== b.y) out.push([a, b]);
+      continue;
+    }
+    const x1 = Math.max(lo, Math.min(a.x, b.x));
+    const x2 = Math.min(hi, Math.max(a.x, b.x));
+    if (x2 <= x1) continue;
+    // Richting behouden (van a naar b), zodat een streepjespatroon dezelfde kant op loopt.
+    out.push(a.x < b.x ? [{ x: x1, y: a.y }, { x: x2, y: b.y }] : [{ x: x2, y: a.y }, { x: x1, y: b.y }]);
+  }
+  return out;
+}
+
 function drawDependencies(
   d2d: Draw2D,
   m: ReportMetrics,
@@ -2482,6 +2512,8 @@ function drawDependencies(
   options: PrintOptions,
   /** Volg-weergave: alleen paren met béide endpoints zichtbaar; óók de rij-index-bron. */
   rowIndexOf: Map<string, number>,
+  /** Tijdvenster: alleen het deel van elke route tussen deze twee x-waarden tekenen (chartgebied). */
+  clipX?: readonly [number, number],
 ) {
   d2d.lineWidth = 1.2;
 
@@ -2546,28 +2578,43 @@ function drawDependencies(
     //    "omheen" via de rijgoot: de horizontale scheiding tussen twee rijen (bovenrand van de
     //    opvolger-rij als die eronder ligt, onderrand als hij erboven ligt), een paar px de rij in
     //    zodat de lijn nét naast de rasterlijn valt.
-    d2d.beginPath();
     // Voorwaarts (knik volstaat) als `outX` ruim buiten de opvolgerbalk ligt aan de aankomstkant:
     // bij start-aankomst (dirIn −1) rechts ervan, bij finish-aankomst (dirIn +1) links ervan.
+    let route: { x: number; y: number }[];
     if ((outX - toX) * dirIn >= DEP_STUB) {
-      d2d.moveTo(fromX, predY);
-      d2d.lineTo(outX, predY);
-      d2d.lineTo(outX, succY);
-      d2d.lineTo(toX, succY);
+      route = [{ x: fromX, y: predY }, { x: outX, y: predY }, { x: outX, y: succY }, { x: toX, y: succY }];
     } else {
       const gutterInset = 2;
       const gutterY = succIdx > predIdx
         ? rowToY(succIdx) + gutterInset            // opvolger eronder ⇒ goot = bovenrand opvolger-rij
         : rowToY(succIdx) + m.rowHeight - gutterInset; // opvolger erboven ⇒ goot = onderrand opvolger-rij
       const inX = toX + dirIn * DEP_STUB;
-      d2d.moveTo(fromX, predY);
-      d2d.lineTo(outX, predY);
-      d2d.lineTo(outX, gutterY);
-      d2d.lineTo(inX, gutterY);
-      d2d.lineTo(inX, succY);
-      d2d.lineTo(toX, succY);
+      route = [
+        { x: fromX, y: predY }, { x: outX, y: predY }, { x: outX, y: gutterY },
+        { x: inX, y: gutterY }, { x: inX, y: succY }, { x: toX, y: succY },
+      ];
+    }
+    d2d.beginPath();
+    if (!clipX) {
+      // Zonder venster: één doorlopend pad, byte-identiek aan het gedrag van vóór het venster.
+      d2d.moveTo(route[0].x, route[0].y);
+      for (let i = 1; i < route.length; i++) d2d.lineTo(route[i].x, route[i].y);
+    } else {
+      // Met venster: de route bestaat uit horizontale en verticale stukken. Een horizontaal stuk
+      // wordt op [lo, hi] geknipt, een verticaal stuk valt helemaal binnen of helemaal buiten.
+      for (const [a, b] of clipRoute(route, clipX[0], clipX[1])) {
+        d2d.moveTo(a.x, a.y);
+        d2d.lineTo(b.x, b.y);
+      }
     }
     d2d.stroke();
+
+    // Pijlpunt alleen als hij helemaal binnen het venster valt: een halve punt op de rand leest als
+    // een balkrand.
+    if (clipX) {
+      const tipBack = toX + dirIn * 5;
+      if (!(Math.min(toX, tipBack) >= clipX[0] && Math.max(toX, tipBack) <= clipX[1])) continue;
+    }
 
     // Arrowhead (filled triangle) — een `fill` negeert het dash-patroon, dus ook een niet-bepalende
     // relatie houdt een massieve pijlpunt (net als op het scherm).

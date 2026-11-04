@@ -160,6 +160,7 @@
   "statusLine_progress": "Ligne d’avancement",
   "statusLineHint": "Définissez d’abord une date d’état",
   "followView": "Suivre la vue (filtre, groupe, tri)",
+  "ganttPeriod": "Période à imprimer :",
   "statusDateLabel": "Date d’état",
   "progressDateLabel": "Date d’avancement",
   "resourceGantt": {

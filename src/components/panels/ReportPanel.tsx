@@ -27,7 +27,7 @@ import {
   TABLE_REPORT_TYPES,
   type ReportPaperSize, type ReportType, type ResourceGanttReportOptions, type TableReportOptions,
 } from '@/utils/reportSettings';
-import { computeResourceGanttRows } from '@/engine/reports';
+import { computeResourceGanttRows, type ReportingPeriod } from '@/engine/reports';
 import { countCriticalActivities } from '@/engine/scheduler/scheduleAnalysis';
 import { durationSuffixesFrom } from '@/utils/taskDuration';
 import type { ViewRow } from '@/engine/view/visibleRows';
@@ -372,6 +372,8 @@ export function ReportPanel() {
   // Alleen de rasterkwaliteit. Deze waarde gaat bewust NIET in PrintOptions: PDF en paginering
   // mogen nooit veranderen door hoe scherp iemand de preview op zijn scherm leest.
   const [previewQuality, setPreviewQuality] = useState(DEFAULT_REPORT_SETTINGS.previewQuality);
+  // Afdrukperiode van de Gantt-afdruk (zie `ReportSettings.ganttPeriod`).
+  const [ganttPeriod, setGanttPeriod] = useState<ReportingPeriod>(DEFAULT_REPORT_SETTINGS.ganttPeriod);
 
   // Instellingenkolom horizontaal sleepbaar. Zelfde generieke
   // sleeppatroon als de rechterpaneel-splitter in App.tsx en de tabel/chart-splitter in
@@ -450,6 +452,7 @@ export function ReportPanel() {
       setStatusLine(s.statusLine);
       setFollowView(s.followView);
       setPreviewQuality(s.previewQuality);
+      setGanttPeriod(s.ganttPeriod);
       setTableOptions(s.tableReports);
       setResourceGanttOptions(s.resourceGantt);
       hydratedRef.current = true;
@@ -486,13 +489,14 @@ export function ReportPanel() {
       reportType, showCritical, showFloat, showDeps, showWeekends, compressNonWorkdays: reportCompressNonWorkdays, showLegend,
       showTaskNames, showCompletion, truncateTaskNames, taskNameColumnWidth, showBaselineOverlay, autoFit, customZoom,
       paperSize, orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, statusLine, followView, previewQuality,
+      ganttPeriod,
       tableReports: tableOptions,
       resourceGantt: resourceGanttOptions,
     }).catch(() => {});
   }, [reportType, showCritical, showFloat, showDeps, showWeekends, reportCompressNonWorkdays, showLegend, showTaskNames,
       showCompletion, truncateTaskNames, taskNameColumnWidth, showBaselineOverlay, autoFit, customZoom, paperSize,
       orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, statusLine, followView, previewQuality,
-      tableOptions, resourceGanttOptions]);
+      ganttPeriod, tableOptions, resourceGanttOptions]);
 
   // Resourcediagram: dezelfde Gantt-render, maar de rijen komen uit de pure rekenmodule
   // (per resource-identiteit een band, daaronder zijn taken) en niet van het scherm.
@@ -521,6 +525,10 @@ export function ReportPanel() {
   const resourceGanttWindow = reportType === 'resourceGantt' && resourceGanttOptions.period.preset !== 'project'
     ? resourceGanttPeriod
     : undefined;
+  // Gantt-afdruk: hetzelfde tijdvenster, maar de rijen blijven allemaal staan (een taak buiten de
+  // periode houdt haar rij zonder balk) en de relatiepijlen worden op de rand afgekapt.
+  const ganttResolvedPeriod = useResolvedPeriod(ganttPeriod);
+  const ganttWindow = reportType === 'gantt' && ganttPeriod.preset !== 'project' ? ganttResolvedPeriod : undefined;
   const resourceGantt = useMemo(() => (reportType === 'resourceGantt'
     ? computeResourceGanttRows({ tasks, resources, assignments }, {
       includeUnassigned: resourceGanttOptions.includeUnassigned, noneLabel, locale: i18n.language,
@@ -753,8 +761,9 @@ export function ReportPanel() {
     rows: reportRows,
     // "Een blad per persoon": gedwongen paginaovergang vóór elke resourceband.
     pageBreakBeforeGroups: reportType === 'resourceGantt' && resourceGanttOptions.pageBreakPerResource,
-    // De tijdas op de rapportageperiode (alleen resourcediagram, alleen buiten *Hele project*).
-    timeWindow: resourceGanttWindow,
+    // De tijdas op de rapportageperiode (resourcediagram) of de afdrukperiode (Gantt-afdruk); bij
+    // *Hele project* geen venster.
+    timeWindow: resourceGanttWindow ?? ganttWindow,
     // Eenheden/dag en curve van de band op de taak als tabelkolommen (alleen resourcediagram).
     assignmentColumns,
     rowAssignments: resourceGantt?.assignmentByRowKey,
@@ -776,7 +785,7 @@ export function ReportPanel() {
     cpmResult, barColorSelection, fieldCtx.activityCodeTypes, fieldCtx.customFieldDefs,
     reportTaskTypeLabels, tTask, daySuffix, statusLine, statusDate, resources,
     assignments, baselineOverlay, baselineComparisons, baselineNames, reportRows, reportType, resourceGanttOptions.pageBreakPerResource, tasks.length,
-    resourceGantt, resourceGanttWindow, assignmentColumns, curveLabels, curveColumnWidth, columnWidths, tableHeaders, i18n.language,
+    resourceGantt, resourceGanttWindow, ganttWindow, assignmentColumns, curveLabels, curveColumnWidth, columnWidths, tableHeaders, i18n.language,
     durationDisplay, durationSuffixes, calendars, workdayDurationMeasure]);
   // `options` bevat afgeleide catalogus-/vertaalobjecten die bij een lokale preview-state-update
   // opnieuw kunnen worden aangemaakt zonder dat hun inhoud wijzigde. De rastertaak gebruikt deze
@@ -1553,7 +1562,17 @@ export function ReportPanel() {
                 sortering, inklapstatus). Uit (default) = de volledige takenboom. Niet bij
                 het resourcediagram: daar komen de rijen per definitie niet van het scherm. */}
             {reportType === 'gantt' && (
-              <ReportCheckRow spaced checked={followView} onChange={setFollowView} label={t('followView')} />
+              <>
+                <ReportCheckRow spaced checked={followView} onChange={setFollowView} label={t('followView')} />
+                {/* Afdrukperiode: alleen dit stuk van de tijdlijn; alle rijen blijven staan. */}
+                <ReportingPeriodField
+                  id="report-opt-ganttPeriod"
+                  label={t('ganttPeriod')}
+                  value={ganttPeriod}
+                  onChange={setGanttPeriod}
+                  dataKey="ganttPeriod"
+                />
+              </>
             )}
 
             {/* Resourcediagram: een blad per resource, en de taken zonder resource erbij. */}

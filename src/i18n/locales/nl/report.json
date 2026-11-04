@@ -157,6 +157,7 @@
   "statusLine_progress": "Voortgangslijn",
   "statusLineHint": "Stel eerst een statusdatum in",
   "followView": "Volg weergave (filter, groepering, sortering)",
+  "ganttPeriod": "Afdrukperiode:",
   "statusDateLabel": "Statusdatum",
   "progressDateLabel": "Voortgangsdatum",
   "resourceGantt": {

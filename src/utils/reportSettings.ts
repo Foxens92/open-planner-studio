@@ -206,6 +206,12 @@ export interface ReportSettings {
   /** Export volgt de schermweergave — filter, groepering, sortering én inklapstatus. */
   followView: boolean;
   previewQuality: ReportPreviewQuality;
+  /**
+   * Afdrukperiode van de Gantt-afdruk: de tijdas loopt exact over dit venster en balken en
+   * relatiepijlen worden op de rand afgekapt; álle taakrijen blijven staan (een taak buiten het
+   * venster houdt haar rij, zonder balk). `project` = geen venster (het oude gedrag).
+   */
+  ganttPeriod: ReportingPeriod;
   tableReports: TableReportOptions;
   resourceGantt: ResourceGanttReportOptions;
 }
@@ -239,6 +245,7 @@ export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
   statusLine: 'none',
   followView: false,
   previewQuality: '200',
+  ganttPeriod: { preset: 'project' },
   tableReports: { ...DEFAULT_TABLE_REPORT_OPTIONS },
   resourceGantt: { ...DEFAULT_RESOURCE_GANTT_OPTIONS },
 };
@@ -366,6 +373,7 @@ export async function loadReportSettings(): Promise<ReportSettings> {
     // Een opgeslagen `previewZoom` (oudere versie) wordt bewust genegeerd: de preview verandert
     // niet van CSS-formaat. Alleen een geldige kwaliteitswaarde heeft effect.
     previewQuality: parseEnum(PREVIEW_QUALITIES, s.previewQuality) ?? d.previewQuality,
+    ganttPeriod: parseReportingPeriod(s.ganttPeriod, d.ganttPeriod),
     tableReports: parseTableReportOptions(s.tableReports),
     resourceGantt: parseResourceGanttOptions(s.resourceGantt),
   };
