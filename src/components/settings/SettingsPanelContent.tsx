@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useProfileCountsWorkdays } from '@/hooks/useDurationMeasure';
 import { useAppStore } from '@/state/appStore';
 import { useResolvedUITheme } from '@/hooks/useResolvedUITheme';
-import { ResolvedUITheme, UI_THEMES, DocumentChromeStyle, DateNotation, TimeNotation, DurationDisplay, BarSplitMode, UIFontFamily, UI_FONT_FAMILIES, UI_FONT_SCALES, ROW_HEIGHT_SCALES, type UIState } from '@/state/slices/types';
-import { saveZoomSettings, saveDebugTerminalEnabled, saveDocumentChromeStyle, saveShowClassicViewControls, saveConstructionMode, saveDateNotation, saveTimeNotation, saveShowTaskTypes, saveAllowMixedDayHour, saveDurationDisplay, saveBarSplitMode, saveCompressNonWorkdays, saveUIFontFamily, saveUIFontScale, saveRowHeightScale, saveAiAutostart, saveFormatNoticeHidden, saveRibbonWheelSwitchesTabs } from '@/utils/settingsStore';
+import { ResolvedUITheme, UI_THEMES, DocumentChromeStyle, DateNotation, TimeNotation, DurationDisplay, BarSplitMode, UIFontFamily, UI_FONT_FAMILIES, UI_TEXT_BASE_PX, UI_TEXT_PX_MIN, UI_TEXT_PX_MAX, UI_TEXT_PX_STEP, ROW_HEIGHT_PX_MIN, ROW_HEIGHT_PX_MAX, type UIState } from '@/state/slices/types';
+import { PxSizeField } from '@/components/common/PxSizeField';
+import { taskBarRowHeight, taskRowHeight } from '@/engine/taskGrid/rowHeight';
+import { saveZoomSettings, saveDebugTerminalEnabled, saveDocumentChromeStyle, saveShowClassicViewControls, saveConstructionMode, saveDateNotation, saveTimeNotation, saveShowTaskTypes, saveAllowMixedDayHour, saveDurationDisplay, saveBarSplitMode, saveCompressNonWorkdays, saveUIFontFamily, saveUIFontScale, saveRowHeightPx, saveAiAutostart, saveFormatNoticeHidden, saveRibbonWheelSwitchesTabs } from '@/utils/settingsStore';
 import { FORMAT_NOTICE_KINDS, withFormatNoticeShown } from '@/services/formatNoticeKinds';
 import { applyAiModeLive } from '@/services/mcp/server';
 import { isTauri } from '@/utils/platform';
@@ -59,7 +61,7 @@ export function SettingsPanelContent() {
   const followSystem = currentTheme === 'system';
   const uiFontFamily = useAppStore(s => s.ui.uiFontFamily);
   const uiFontScale = useAppStore(s => s.ui.uiFontScale);
-  const rowHeightScale = useAppStore(s => s.ui.rowHeightScale);
+  const rowHeightPx = useAppStore(s => s.ui.rowHeightPx);
   const enableQuarterHourZoom = useAppStore(s => s.ui.enableQuarterHourZoom);
   const weekStartDay = useAppStore(s => s.ui.weekStartDay);
   const debugTerminalEnabled = useAppStore(s => s.ui.debugTerminalEnabled);
@@ -219,24 +221,39 @@ export function SettingsPanelContent() {
               <p className="scrollzoom-hint">{t('settings.fontHint')}</p>
             </div>
 
+            {/* Tekengrootte in px van de gewone tekstrol (11 px = 100 %); intern een percentage. */}
             <div className="settings-section">
-              <h3>{t('settings.fontScaleLabel')}</h3>
-              <Select
-                aria-label={t('settings.fontScaleLabel')}
-                value={String(uiFontScale)}
-                onChange={v => applySetting('uiFontScale', Number(v), saveUIFontScale)}
-                options={UI_FONT_SCALES.map(s => ({ value: String(s), label: `${s}%` }))}
+              <h3><label htmlFor="settings-ui-text-px">{t('settings.fontScaleLabel')}</label></h3>
+              <PxSizeField
+                id="settings-ui-text-px"
+                dataKey="uiTextPx"
+                ariaLabel={t('settings.fontScaleLabel')}
+                value={UI_TEXT_BASE_PX * uiFontScale / 100}
+                defaultValue={UI_TEXT_BASE_PX}
+                min={UI_TEXT_PX_MIN}
+                max={UI_TEXT_PX_MAX}
+                step={UI_TEXT_PX_STEP}
+                onChange={px => applySetting('uiFontScale', px / UI_TEXT_BASE_PX * 100, saveUIFontScale)}
+                onReset={() => applySetting('uiFontScale', 100, saveUIFontScale)}
               />
               <p className="scrollzoom-hint">{t('settings.fontScaleHint')}</p>
             </div>
 
+            {/* Rijhoogte in px; standaard automatisch (32 px × tekengrootte). */}
             <div className="settings-section">
-              <h3>{t('settings.rowHeightLabel')}</h3>
-              <Select
-                aria-label={t('settings.rowHeightLabel')}
-                value={String(rowHeightScale)}
-                onChange={v => applySetting('rowHeightScale', Number(v), saveRowHeightScale)}
-                options={ROW_HEIGHT_SCALES.map(s => ({ value: String(s), label: `${s}%` }))}
+              <h3><label htmlFor="settings-row-height-px">{t('settings.rowHeightLabel')}</label></h3>
+              <PxSizeField
+                id="settings-row-height-px"
+                dataKey="rowHeightPx"
+                ariaLabel={t('settings.rowHeightLabel')}
+                value={taskRowHeight(uiFontScale, rowHeightPx)}
+                defaultValue={taskBarRowHeight(uiFontScale)}
+                isDefault={rowHeightPx === null}
+                min={ROW_HEIGHT_PX_MIN}
+                max={ROW_HEIGHT_PX_MAX}
+                step={1}
+                onChange={px => applySetting('rowHeightPx', px, saveRowHeightPx)}
+                onReset={() => applySetting('rowHeightPx', null, saveRowHeightPx)}
               />
               <p className="scrollzoom-hint">{t('settings.rowHeightHint')}</p>
             </div>

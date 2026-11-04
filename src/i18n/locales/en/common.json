@@ -509,9 +509,9 @@
     "timeNotation12h": "12-hour (1:00 PM)",
     "fontFamilyLabel": "Font",
     "fontScaleLabel": "Text size",
-    "fontScaleHint": "Scales the interface text and layout.",
+    "fontScaleHint": "Size of the regular interface text in px, from 9 to 14. Default 11 px (100%).",
     "rowHeightLabel": "Row height",
-    "rowHeightHint": "Height of the rows in the table and the Gantt chart. Bars keep their thickness; a taller row gives more space around them.",
+    "rowHeightHint": "Height of the rows in the table and the Gantt chart in px, from 22 to 96. By default it follows the text size (32 px at 100%). Bars keep their thickness; a taller row gives more space around them.",
     "fontFamilyDefault": "Default",
     "fontFamilySystem": "System",
     "fontFamilySerif": "Serif",
@@ -1860,5 +1860,9 @@
       "hammock": "Follows the linked tasks",
       "unknown": "Reason not established"
     }
+  },
+  "pxField": {
+    "reset": "Default (100%, {{px}} px)",
+    "resetTitle": "Back to the default value: {{px}} px"
   }
 }

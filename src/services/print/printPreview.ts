@@ -17,7 +17,6 @@ import { taskSplitSegments } from '@/engine/renderer/splitBarGeometry';
 import { milestoneAnchorX, taskBarSpan } from '@/engine/renderer/barSpan';
 import { taskDateLabel } from '@/utils/taskDateLabel';
 import { paintProgressBarPiece } from '@/engine/renderer/barPaint';
-import { snapToChoice } from '@/utils/numberChoice';
 import { isLeafTask, isSummaryTask } from '@/utils/taskHierarchy';
 // Balkkleurmodi: pure adviesmodule — de printlaag vertaalt alleen naar
 // fill/segmenten/outline-aanroepen en houdt zelf geen kleurlogica.
@@ -57,7 +56,6 @@ import type { DurationSuffixes } from '@/utils/durationFormat';
 
 // BASISmaten bij rapport-lettergrootte 100%. Niets tekent hier nog rechtstreeks mee: alle
 // tekenhelpers rekenen met de geschaalde varianten uit {@link ReportMetrics}/{@link makeMetrics}.
-const ROW_HEIGHT = 24;
 const PROJECT_HEADER_HEIGHT = 64;
 const TIMELINE_HEADER_HEIGHT = 44;
 // De tabelbreedte is geen constante maar de som van de kolommen (zie `COL` en `tableWidthFor`).
@@ -540,7 +538,7 @@ interface ReportMetrics {
   /** `font(9)` / `font(9, true)` → de CSS-fontstring met de geschaalde puntgrootte. */
   font(size: number, bold?: boolean): string;
   rowHeight: number;
-  /** Rijhoogte waarop de balken gemaakt zijn: die bij rijhoogte 100% (zie `PrintOptions.rowHeightScale`).
+  /** Rijhoogte waarop de balken gemaakt zijn: die bij rijhoogte 100% (zie `PrintOptions.rowHeightPx`).
    *  Een hogere rij geeft lucht rond een even dikke balk; een lagere rij een dunnere balk. */
   barRowHeight: number;
   projectHeaderHeight: number;
@@ -552,24 +550,48 @@ interface ReportMetrics {
 }
 
 /**
- * De aangeboden rapport-lettergroottes (percentage). Dit is de ENIGE bron van waarheid: de Select in
- * `ReportPanel` bouwt zijn opties hieruit, `loadReportSettings` valideert ertegen en `makeMetrics`
- * snapt ernaartoe.
+ * Lettergrootte en rijhoogte van de afdruk worden sinds 2026-11-04 (eigenaar) in PIXELS ingesteld:
+ * de lettergrootte als die van de taaknaam in de tabel (9 px bij 100 %), de rijhoogte als absolute
+ * maat (24 px × lettergrootte als standaard). Pixels zijn hier tekenpixels van de render (96 per
+ * inch, dus 0,75 pt op papier bij schaal 1); de pagineerder kan de hele tekening nog schalen
+ * (Auto-fit). Intern blijft de lettergrootte een percentage (`reportFontScale`), nu een vrij getal
+ * binnen {@link REPORT_FONT_SCALE_MIN}..{@link REPORT_FONT_SCALE_MAX}. Dit zijn de ENIGE grenzen: het
+ * paneel, `loadReportSettings` en `makeMetrics` klemmen er allemaal op.
  */
-export const REPORT_FONT_SCALES = [90, 100, 110, 125] as const;
+export const REPORT_TEXT_BASE_PX = 9;
+export const REPORT_TEXT_PX_MIN = 6;
+export const REPORT_TEXT_PX_MAX = 18;
+export const REPORT_TEXT_PX_STEP = 0.5;
+export const REPORT_FONT_SCALE_MIN = (REPORT_TEXT_PX_MIN / REPORT_TEXT_BASE_PX) * 100;
+export const REPORT_FONT_SCALE_MAX = (REPORT_TEXT_PX_MAX / REPORT_TEXT_BASE_PX) * 100;
+/** Rijhoogte van de afdruk bij lettergrootte 100 % (de oude vaste rij). */
+export const REPORT_ROW_BASE_PX = 24;
+export const REPORT_ROW_PX_MIN = 12;
+export const REPORT_ROW_PX_MAX = 96;
 
-/** De aangeboden rijhoogtes van de Gantt-afdruk (percentage van de normale rij); zelfde rol als
- *  {@link REPORT_FONT_SCALES}. */
-export const REPORT_ROW_HEIGHT_SCALES = [75, 100, 125, 150, 175, 200] as const;
+/** Lettergrootte-percentage geklemd op het bereik; onbruikbaar ⇒ 100. */
+export function clampReportFontScale(raw: unknown): number {
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(REPORT_FONT_SCALE_MAX, Math.max(REPORT_FONT_SCALE_MIN, raw))
+    : 100;
+}
+
+/** Ingestelde rijhoogte (px) geklemd op het bereik; `null`/onbruikbaar ⇒ `null` (automatisch). */
+export function clampReportRowHeightPx(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(REPORT_ROW_PX_MAX, Math.max(REPORT_ROW_PX_MIN, raw))
+    : null;
+}
+
+/** De automatische rijhoogte (de standaard) bij een lettergrootte-percentage. */
+export function reportAutoRowHeightPx(reportFontScale: number | undefined): number {
+  return REPORT_ROW_BASE_PX * clampReportFontScale(reportFontScale ?? 100) / 100;
+}
 
 /**
  * Bouw de {@link ReportMetrics} voor een render. `reportFontScale` is een PERCENTAGE; ontbreekt hij
- * (of is hij onbruikbaar) dan geldt 100 ⇒ factor exact 1.
- *
- * Een waarde buiten {@link REPORT_FONT_SCALES} wordt naar de dichtstbijzijnde toegestane waarde
- * GESNAPT, niet op het bereik geklemd. Klemmen zou een 108 gewoon op 108% renderen — een grootte die
- * geen enkele Select kan tonen en die na een herstart dus niet reproduceerbaar is. Zelfde semantiek
- * als in de settings- en rapport-loaders, allemaal via {@link snapToChoice}.
+ * (of is hij onbruikbaar) dan geldt 100 ⇒ factor exact 1. Een waarde buiten het bereik wordt geklemd.
+ * `rowHeightPx` is de ingestelde rijhoogte; `null`/afwezig ⇒ automatisch (24 px × lettergrootte).
  */
 function makeMetrics(
   reportFontScale: number | undefined,
@@ -579,12 +601,12 @@ function makeMetrics(
   curveColumnWidth?: number,
   columnWidths?: TableColumnWidths,
   fontStack: string = DEFAULT_REPORT_FONT_STACK,
-  rowHeightScale?: number,
+  rowHeightPx?: number | null,
 ): ReportMetrics {
-  const pct = snapToChoice(REPORT_FONT_SCALES, reportFontScale ?? 100) ?? 100;
-  const k = pct / 100;
-  // Rijhoogte bovenop de lettergrootte; snapt net als de lettergrootte naar een aangeboden waarde.
-  const rowK = (snapToChoice(REPORT_ROW_HEIGHT_SCALES, rowHeightScale ?? 100) ?? 100) / 100;
+  const k = clampReportFontScale(reportFontScale ?? 100) / 100;
+  // De automatische rij hoort bij de lettergrootte; een ingestelde rij is een absolute maat.
+  const autoRow = REPORT_ROW_BASE_PX * k;
+  const rowHeight = clampReportRowHeightPx(rowHeightPx) ?? autoRow;
   const widths = resolveColumnWidths(taskNameColumnWidth, curveColumnWidth, columnWidths);
   const projectHeaderHeight = PROJECT_HEADER_HEIGHT * k;
   const timelineHeaderHeight = TIMELINE_HEADER_HEIGHT * k;
@@ -592,8 +614,8 @@ function makeMetrics(
     k,
     s: (v) => v * k,
     font: (size, bold) => `${bold ? 'bold ' : ''}${size * k}px ${fontStack}`,
-    rowHeight: ROW_HEIGHT * k * rowK,
-    barRowHeight: ROW_HEIGHT * k * Math.min(1, rowK),
+    rowHeight,
+    barRowHeight: Math.min(rowHeight, autoRow),
     projectHeaderHeight,
     timelineHeaderHeight,
     // Bewust de SOM van de twee geschaalde hoogtes, niet `(PROJECT + TIMELINE) * k`: alleen zo valt
@@ -740,11 +762,12 @@ export interface PrintOptions {
    */
   reportFontScale?: number;
   /**
-   * Rijhoogte van de Gantt-afdruk als percentage van de normale rij (bovenop `reportFontScale`).
-   * 100 (of ontbrekend) = ongewijzigd. Balken, ruiten en baselinestrook houden de dikte van de rij
-   * bij 100% en staan in het midden van een hogere rij; bij een lagere rij worden ze dunner.
+   * Rijhoogte van de Gantt-afdruk in tekenpixels ({@link REPORT_ROW_PX_MIN}..{@link REPORT_ROW_PX_MAX}).
+   * `null`/ontbrekend = automatisch (24 px × lettergrootte, het oude gedrag). Balken, ruiten en
+   * baselinestrook houden de dikte van de automatische rij en staan in het midden van een hogere rij;
+   * bij een lagere rij worden ze dunner.
    */
-  rowHeightScale?: number;
+  rowHeightPx?: number | null;
   /**
    * CSS-fontstack van alle rapporttekst op het canvas (preview, raster-export). Ontbreekt ⇒ het
    * gevendorde Inter (`DEFAULT_REPORT_FONT_STACK`), dus dan tekent de render exact als voorheen.
@@ -993,12 +1016,12 @@ export function renderReport(
   const paper = toPaperSize(options.paperSize);
   const printableWidth = printableWidthLogicalPx(paper, options.orientation);
   let assignmentColumns = !!options.assignmentColumns;
-  let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily, options.rowHeightScale);
+  let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily, options.rowHeightPx);
   let assignmentColumnsDropped = false;
   if (assignmentColumns && m.tableWidth > printableWidth - minChartWidthPx(printableWidth)) {
     assignmentColumns = false;
     assignmentColumnsDropped = true;
-    m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, false, undefined, options.columnWidths, options.fontFamily, options.rowHeightScale);
+    m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, false, undefined, options.columnWidths, options.fontFamily, options.rowHeightPx);
   }
 
   // Rijen-bron: zie {@link buildPrintRows} — taakrijen mét diepte plus groepsband-rijen die

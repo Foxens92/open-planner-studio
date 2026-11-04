@@ -553,8 +553,9 @@ export async function saveUIFontScale(value: number): Promise<void> {
   await setSetting('uiFontScale', value);
 }
 
-export async function saveRowHeightScale(value: number): Promise<void> {
-  await setSetting('rowHeightScale', value);
+/** `null` = terug naar automatisch; de opgeslagen `null` leest de loader als afwezig. */
+export async function saveRowHeightPx(value: number | null): Promise<void> {
+  await setSetting('rowHeightPx', value);
 }
 
 // --- Duurinstellingen. App-instellingen, dus onder de 3-plekken-regel

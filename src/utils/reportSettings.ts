@@ -21,9 +21,8 @@
 // hoort in het projectbestand thuis (IFC-round-trip), niet in localStorage.
 
 import { getSetting, setSetting } from '@/utils/settingsStore';
-import { snapToChoice } from '@/utils/numberChoice';
 import { parseBoolean, parseClampedInt, parseEnum } from '@/utils/settingParsers';
-import { NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, REPORT_FONT_SCALES, REPORT_MAX_ZOOM, REPORT_ROW_HEIGHT_SCALES, REPORT_MIN_ZOOM } from '@/services/print/printPreview';
+import { NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, clampReportFontScale, clampReportRowHeightPx, REPORT_MAX_ZOOM, REPORT_MIN_ZOOM } from '@/services/print/printPreview';
 import {
   REPORTING_PERIOD_PRESETS, type ReportingPeriod, isIsoDay, weeksToPreset,
 } from '@/engine/reports/reportingPeriod';
@@ -201,8 +200,8 @@ export interface ReportSettings {
   repeatFooter: boolean;
   timelineColumns: number;
   reportFontScale: number;
-  /** Rijhoogte van de Gantt-afdruk in procent (`REPORT_ROW_HEIGHT_SCALES`). */
-  rowHeightScale: number;
+  /** Rijhoogte van de Gantt-afdruk in px; `null` = automatisch (zie `PrintOptions.rowHeightPx`). */
+  rowHeightPx: number | null;
   /** Statuslijn in de export: drie opties. */
   statusLine: 'none' | 'statusDate' | 'progress';
   /** Export volgt de schermweergave — filter, groepering, sortering én inklapstatus. */
@@ -244,7 +243,7 @@ export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
   repeatFooter: true,
   timelineColumns: 1,
   reportFontScale: 100,
-  rowHeightScale: 100,
+  rowHeightPx: null,
   statusLine: 'none',
   followView: false,
   previewQuality: '200',
@@ -259,10 +258,6 @@ export const PAPER_SIZES: readonly ReportPaperSize[] = ['A4', 'A3', 'A2', 'A1', 
 const ORIENTATIONS: readonly ReportOrientation[] = ['landscape', 'portrait'];
 const STATUS_LINES: readonly ReportSettings['statusLine'][] = ['none', 'statusDate', 'progress'];
 const PREVIEW_QUALITIES: readonly ReportPreviewQuality[] = ['100', '200', '300'];
-/** De vaste trap uit `printPreview` — bewust GEEN eigen kopie: de Select in het paneel, de klem in
- *  `makeMetrics` en deze parser moeten per definitie dezelfde waarden kennen, anders accepteert de
- *  ene laag iets wat de andere niet kan tonen of tekenen. */
-const FONT_SCALES: readonly number[] = REPORT_FONT_SCALES;
 /** Grenzen van de zoom-slider resp. de tijdlijnkolommen-Select in het paneel. */
 const ZOOM_MIN = REPORT_MIN_ZOOM;
 const ZOOM_MAX = REPORT_MAX_ZOOM;
@@ -369,9 +364,10 @@ export async function loadReportSettings(): Promise<ReportSettings> {
     repeatHeader: parseBoolean(s.repeatHeader) ?? d.repeatHeader,
     repeatFooter: parseBoolean(s.repeatFooter) ?? d.repeatFooter,
     timelineColumns: parseClampedInt(s.timelineColumns, TIMELINE_COLUMNS_MIN, TIMELINE_COLUMNS_MAX) ?? d.timelineColumns,
-    // `snapToChoice`: dezelfde "getal buiten de keuzelijst"-semantiek als de settings-loader.
-    reportFontScale: snapToChoice(FONT_SCALES, s.reportFontScale) ?? d.reportFontScale,
-    rowHeightScale: snapToChoice(REPORT_ROW_HEIGHT_SCALES, s.rowHeightScale) ?? d.rowHeightScale,
+    // Dezelfde klem als `makeMetrics` (één bron in `printPreview`); oude trapwaarden blijven gelijk.
+    reportFontScale: typeof s.reportFontScale === 'number' && Number.isFinite(s.reportFontScale)
+      ? clampReportFontScale(s.reportFontScale) : d.reportFontScale,
+    rowHeightPx: clampReportRowHeightPx(s.rowHeightPx),
     statusLine: parseEnum(STATUS_LINES, s.statusLine) ?? d.statusLine,
     followView: parseBoolean(s.followView) ?? d.followView,
     // Een opgeslagen `previewZoom` (oudere versie) wordt bewust genegeerd: de preview verandert

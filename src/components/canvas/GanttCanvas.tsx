@@ -201,8 +201,8 @@ export function GanttCanvas({
   const fontScale = uiFontScale / 100;
   // Rijhoogte-instelling bovenop de tekengrootte; zelfde functie als het taakraster. De balken
   // houden de dikte van de rij bij 100% (`barRowHeight`).
-  const rowHeightScale = useAppStore(s => s.ui.rowHeightScale);
-  const rowHeight = taskRowHeight(uiFontScale, rowHeightScale);
+  const rowHeightPx = useAppStore(s => s.ui.rowHeightPx);
+  const rowHeight = taskRowHeight(uiFontScale, rowHeightPx);
   const barRowHeight = taskBarRowHeight(uiFontScale);
   const headerHeight = Math.round(HEADER_HEIGHT * fontScale);
   const weekStartDay = useAppStore(s => s.ui.weekStartDay);

@@ -32,9 +32,9 @@ The schedule as a bar chart, with a table on the left and a timeline on the righ
 
 **Author:** — the author in the page header. Read-only: the app takes it from the project settings.
 
-**Font size:** — size of text and table in the report. Choose from 90%, 100%, 110% and 125%. Default: 100%. Effect: with a larger font, text, rows and table grow and the timeline loses width. Independent of *Text size* in the settings.
+**Font size:** — size of text and table in the report, measured on the task name, in px. From 6 to 18 px, in steps of 0.5. Default: 9 px (100%). Effect: with a larger font, text, rows and table grow and the timeline loses width. With Auto-fit the whole printout can still come out larger or smaller on paper. The button *Default (100%, 9 px)* sets the value back. Independent of *Text size* in the settings.
 
-**Row height:** — height of the rows in the Gantt chart and the Resource diagram printout, on top of *Font size:*. Choice from 75% to 200% in steps of 25%. Default: 100%. Effect: a taller row gives more space around the bars, which keep their thickness; the printout gets longer. At 75% the bars get thinner. Independent of *Row height* in the settings.
+**Row height:** — height of the rows in the Gantt chart and the Resource diagram printout, in px. From 12 to 96 px. Default: automatic, 24 px at a font size of 9 px. Effect: a taller row gives more space around the bars, which keep their thickness; the printout gets longer. A lower row makes the bars thinner. The button *Default (100%, … px)* sets the row back to automatic. Independent of *Row height* in the settings.
 
 **Bar colors:** — what the colour of a bar depends on. Choose from *Critical path*, *Per task — automatic* and *By category*, with a drop-down *Category field* for *By category*. Default: *Critical path*. Effect: this is the same choice as *Bar colors* on the *View* tab: if you change it here, the Gantt on screen changes with it. If the chosen field does not exist in this project, it says *This field does not exist in this project. Work category is used temporarily.*
 

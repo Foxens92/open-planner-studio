@@ -32,9 +32,9 @@ De planning als balkenplan, met een tabel links en een tijdlijn rechts, over mee
 
 **Auteur:** — de auteur in de paginakop. Alleen lezen: de app neemt hem uit de projectinstellingen.
 
-**Lettergrootte:** — grootte van tekst en tabel in het rapport. Keuze uit 90%, 100%, 110% en 125%. Standaard: 100%. Effect: bij een grotere letter groeien tekst, rijen en tabel en levert de tijdlijn breedte in. Los van *Tekengrootte* in de instellingen.
+**Lettergrootte:** — grootte van tekst en tabel in het rapport, gemeten aan de taaknaam, in px. Van 6 tot 18 px, in stappen van 0,5. Standaard: 9 px (100 %). Effect: bij een grotere letter groeien tekst, rijen en tabel en levert de tijdlijn breedte in. Met Auto-fit kan de hele afdruk nog groter of kleiner op papier komen. De knop *Standaard (100 %, 9 px)* zet de waarde terug. Los van *Tekengrootte* in de instellingen.
 
-**Rijhoogte:** — hoogte van de rijen in de Gantt-afdruk en het Resourcediagram, bovenop de *Lettergrootte:*. Keuze van 75% tot 200% in stappen van 25%. Standaard: 100%. Effect: een hogere rij geeft meer ruimte rond de balken, die even dik blijven; de afdruk wordt langer. Bij 75% worden de balken dunner. Los van *Rijhoogte* in de instellingen.
+**Rijhoogte:** — hoogte van de rijen in de Gantt-afdruk en het Resourcediagram, in px. Van 12 tot 96 px. Standaard: automatisch, 24 px bij een lettergrootte van 9 px. Effect: een hogere rij geeft meer ruimte rond de balken, die even dik blijven; de afdruk wordt langer. Een lagere rij maakt de balken dunner. De knop *Standaard (100 %, … px)* zet de rij terug op automatisch. Los van *Rijhoogte* in de instellingen.
 
 **Balkkleuren:** — waar de kleur van een balk van afhangt. Keuze uit *Kritiek pad*, *Per taak — automatisch* en *Op categorie*, met bij *Op categorie* een keuzelijst *Categorieveld*. Standaard: *Kritiek pad*. Effect: dit is dezelfde keuze als *Balkkleuren* op het tabblad *Beeld*: verander je hem hier, dan verandert de Gantt op het scherm mee. Bestaat het gekozen veld niet in dit project, dan staat er *Dit veld bestaat niet in dit project. Werksoort wordt tijdelijk gebruikt.*
 

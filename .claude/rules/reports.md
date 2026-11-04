@@ -90,3 +90,10 @@ liggend (`rollRunsAlongTimeline`) = rolbreedte is paginahoogte, dan rekent de la
 `renderReport` Auto-fit (geen vaste breedte om op te passen). Alle pagina's van één PDF delen één maat.
 `printsAtActualSize` (A0 en rol) zet `/PrintScaling /None` in beide PDF-paden. De preview krijgt de echte
 paginamaat via de laatste parameter van `computePreviewRasterLimits`. Bewaking: `check-print-roll-paper.ts`.
+
+**Lettergrootte en rijhoogte in px** (eigenaar 2026-11-04). Het paneel toont beide als px met een knop terug
+naar standaard (`PxSizeField`, rekenhulp `src/utils/pxSize.ts`). Intern blijft `reportFontScale` een
+percentage (9 px taaknaam = 100 %), nu een vrij getal geklemd op `REPORT_FONT_SCALE_MIN..MAX`
+(`clampReportFontScale`, één bron voor paneel, loader en `makeMetrics`); `rowHeightPx` is absoluut
+(`null` = automatisch, 24 px × lettergrootte). De balk houdt de automatische rij als dikte
+(`ReportMetrics.barRowHeight`). Bewaking: `check-row-height-setting.ts`.

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useEffectiveDurationDisplay, useProfileCountsWorkdays } from '@/hooks/useDurationMeasure';
 import { useAppStore } from '@/state/appStore';
 import { useTranslation } from 'react-i18next';
-import { buildPrintRows, curveCellFont, measureCurveColumnWidth, measurePrintReport, measureTableColumnWidths, measureTaskNameColumnWidth, nameCellFont, NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, renderPrintCanvas, renderPrintPreviewPage, renderReport, REPORT_FONT_SCALES, REPORT_MAX_ZOOM, REPORT_ROW_HEIGHT_SCALES, REPORT_MIN_ZOOM, PrintOptions, TableColumnWidths, TableHeaderLabels } from '@/services/print/printPreview';
+import { buildPrintRows, curveCellFont, measureCurveColumnWidth, measurePrintReport, measureTableColumnWidths, measureTaskNameColumnWidth, nameCellFont, NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, renderPrintCanvas, renderPrintPreviewPage, renderReport, REPORT_MAX_ZOOM, REPORT_MIN_ZOOM, REPORT_ROW_PX_MAX, REPORT_ROW_PX_MIN, REPORT_TEXT_BASE_PX, REPORT_TEXT_PX_MAX, REPORT_TEXT_PX_MIN, REPORT_TEXT_PX_STEP, reportAutoRowHeightPx, PrintOptions, TableColumnWidths, TableHeaderLabels } from '@/services/print/printPreview';
 import { computePreviewRasterLimits } from '@/services/print/previewSafety';
 import { getLocalizedMonths, getLocalizedMonthsShort } from '@/i18n/dateFormat';
 import { documentFileBase } from '@/utils/documents';
@@ -10,6 +10,7 @@ import { documentProjectCode } from '@/utils/documentProjectCode';
 import { nameWithProjectCode } from '@/utils/projectCodeName';
 import { computeHighResScale } from '@/utils/miniPdf';
 import { paginateCanvasToPdfBytes, type PaginateOptions } from '@/services/print/paginate';
+import { PxSizeField } from '@/components/common/PxSizeField';
 import { computeTileLayout, footerLayoutWidthFor, rollRunsAlongTimeline, toPaperSize } from '@/services/print/tileLayout';
 import { ensureInterLoaded, getInterFontBytes, getArabicFontBytes } from '@/services/pdf/fontLoader';
 import { RTL_LOCALES, type Locale } from '@/i18n/config';
@@ -365,7 +366,7 @@ export function ReportPanel() {
   // die stuurt de app-chrome aan, deze alleen het papier. Werkt relatief (tekst/tabel groeien, de
   // tijdlijn-zoom niet) — zie de afleiding bij `ReportMetrics` in printPreview.ts.
   const [reportFontScale, setReportFontScale] = useState(DEFAULT_REPORT_SETTINGS.reportFontScale);
-  const [rowHeightScale, setRowHeightScale] = useState(DEFAULT_REPORT_SETTINGS.rowHeightScale);
+  const [rowHeightPx, setRowHeightPx] = useState<number | null>(DEFAULT_REPORT_SETTINGS.rowHeightPx);
   // Statuslijn in de export: letterlijk drie opties (geen / statusdatumlijn / voortgangslijn).
   const [statusLine, setStatusLine] = useState(DEFAULT_REPORT_SETTINGS.statusLine);
   // Volg weergave: export tekent exact de viewRows van het scherm (WYSIWYG).
@@ -450,7 +451,7 @@ export function ReportPanel() {
       setRepeatFooter(s.repeatFooter);
       setTimelineColumns(s.timelineColumns);
       setReportFontScale(s.reportFontScale);
-      setRowHeightScale(s.rowHeightScale);
+      setRowHeightPx(s.rowHeightPx);
       setStatusLine(s.statusLine);
       setFollowView(s.followView);
       setPreviewQuality(s.previewQuality);
@@ -490,14 +491,14 @@ export function ReportPanel() {
     void saveReportSettings({
       reportType, showCritical, showFloat, showDeps, showWeekends, compressNonWorkdays: reportCompressNonWorkdays, showLegend,
       showTaskNames, showCompletion, truncateTaskNames, taskNameColumnWidth, showBaselineOverlay, autoFit, customZoom,
-      paperSize, orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, rowHeightScale, statusLine, followView, previewQuality,
+      paperSize, orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, rowHeightPx, statusLine, followView, previewQuality,
       ganttPeriod,
       tableReports: tableOptions,
       resourceGantt: resourceGanttOptions,
     }).catch(() => {});
   }, [reportType, showCritical, showFloat, showDeps, showWeekends, reportCompressNonWorkdays, showLegend, showTaskNames,
       showCompletion, truncateTaskNames, taskNameColumnWidth, showBaselineOverlay, autoFit, customZoom, paperSize,
-      orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, rowHeightScale, statusLine, followView, previewQuality,
+      orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, rowHeightPx, statusLine, followView, previewQuality,
       ganttPeriod, tableOptions, resourceGanttOptions]);
 
   // Resourcediagram: dezelfde Gantt-render, maar de rijen komen uit de pure rekenmodule
@@ -741,7 +742,7 @@ export function ReportPanel() {
     compressNonWorkdays: reportCompressNonWorkdays,
     timelineColumns,
     reportFontScale,
-    rowHeightScale,
+    rowHeightPx,
     // Welke relaties BEPALEND (driving) zijn is een `CPMResult`-veld dat bewust niet
     // gepersisteerd wordt; de printlaag kan het dus niet zelf afleiden en krijgt het hier door.
     // Bij een cyclus (`cpmResult.error`) of vóór de eerste berekening blijft het `undefined`, en
@@ -784,7 +785,7 @@ export function ReportPanel() {
     },
   }), [showCritical, showFloat, showDeps, showWeekends, showLegend, showTaskNames, showCompletion, showBaselineOverlay,
     autoFit, customZoom, paperSize, orientation, companyName, effectiveNameColumnWidth, t, locale, project.startDate,
-    project.endDate, project.author, dateNotation, timeNotation, weekStartDay, reportCompressNonWorkdays, timelineColumns, reportFontScale, rowHeightScale,
+    project.endDate, project.author, dateNotation, timeNotation, weekStartDay, reportCompressNonWorkdays, timelineColumns, reportFontScale, rowHeightPx,
     cpmResult, barColorSelection, fieldCtx.activityCodeTypes, fieldCtx.customFieldDefs,
     reportTaskTypeLabels, tTask, daySuffix, statusLine, statusDate, resources,
     assignments, baselineOverlay, baselineComparisons, baselineNames, reportRows, reportType, resourceGanttOptions.pageBreakPerResource, tasks.length,
@@ -1482,23 +1483,38 @@ export function ReportPanel() {
 
             {/* Lettergrootte van het rapport. Relatief bedoeld: bij een grotere
                 letter groeien tekst, rijen en tabel op het vel en levert de tijdlijn breedte in. */}
+            {/* Lettergrootte in px van de taaknaam (9 px = 100 %); intern een percentage. */}
             <ReportFieldRow label={t('reportFontScaleLabel')}>
-              <Select
-                className="flex-1 min-w-0"
-                aria-label={t('reportFontScaleLabel')}
-                value={String(reportFontScale)}
-                onChange={v => setReportFontScale(Number(v))}
-                options={REPORT_FONT_SCALES.map(n => ({ value: String(n), label: `${n}%` }))}
+              <PxSizeField
+                id="report-text-px"
+                dataKey="reportTextPx"
+                className="flex-1"
+                ariaLabel={t('reportFontScaleLabel')}
+                value={REPORT_TEXT_BASE_PX * reportFontScale / 100}
+                defaultValue={REPORT_TEXT_BASE_PX}
+                min={REPORT_TEXT_PX_MIN}
+                max={REPORT_TEXT_PX_MAX}
+                step={REPORT_TEXT_PX_STEP}
+                onChange={px => setReportFontScale(px / REPORT_TEXT_BASE_PX * 100)}
+                onReset={() => setReportFontScale(100)}
               />
             </ReportFieldRow>
-            {/* Rijhoogte van de afdruk, los van die op het scherm; balken blijven even dik. */}
+            {/* Rijhoogte van de afdruk in px, los van die op het scherm; standaard volgt hij de
+                lettergrootte. Balken blijven even dik. */}
             <ReportFieldRow label={t('rowHeightScaleLabel')}>
-              <Select
-                className="flex-1 min-w-0"
-                aria-label={t('rowHeightScaleLabel')}
-                value={String(rowHeightScale)}
-                onChange={v => setRowHeightScale(Number(v))}
-                options={REPORT_ROW_HEIGHT_SCALES.map(n => ({ value: String(n), label: `${n}%` }))}
+              <PxSizeField
+                id="report-row-height-px"
+                dataKey="reportRowHeightPx"
+                className="flex-1"
+                ariaLabel={t('rowHeightScaleLabel')}
+                value={rowHeightPx ?? reportAutoRowHeightPx(reportFontScale)}
+                defaultValue={reportAutoRowHeightPx(reportFontScale)}
+                isDefault={rowHeightPx === null}
+                min={REPORT_ROW_PX_MIN}
+                max={REPORT_ROW_PX_MAX}
+                step={1}
+                onChange={px => setRowHeightPx(px)}
+                onReset={() => setRowHeightPx(null)}
               />
             </ReportFieldRow>
 

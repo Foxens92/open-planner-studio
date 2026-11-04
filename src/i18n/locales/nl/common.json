@@ -509,9 +509,9 @@
     "timeNotation12h": "12 uur (1:00 PM)",
     "fontFamilyLabel": "Lettertype",
     "fontScaleLabel": "Tekengrootte",
-    "fontScaleHint": "Schaalt de interface-tekst en -indeling.",
+    "fontScaleHint": "Grootte van de gewone interfacetekst in px, van 9 tot 14. Standaard 11 px (100 %).",
     "rowHeightLabel": "Rijhoogte",
-    "rowHeightHint": "Hoogte van de rijen in de tabel en de Gantt. De balken blijven even dik; een hogere rij geeft meer ruimte eromheen.",
+    "rowHeightHint": "Hoogte van de rijen in de tabel en de Gantt in px, van 22 tot 96. Standaard volgt hij de tekengrootte (32 px bij 100 %). De balken blijven even dik; een hogere rij geeft meer ruimte eromheen.",
     "fontFamilyDefault": "Standaard",
     "fontFamilySystem": "Systeem",
     "fontFamilySerif": "Met schreef",
@@ -1860,5 +1860,9 @@
       "hammock": "Volgt de gekoppelde taken",
       "unknown": "Reden niet vastgesteld"
     }
+  },
+  "pxField": {
+    "reset": "Standaard (100 %, {{px}} px)",
+    "resetTitle": "Terug naar de standaardwaarde: {{px}} px"
   }
 }
