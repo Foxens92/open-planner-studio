@@ -35,6 +35,7 @@
   "repeatHeader": "Repeat header on each page",
   "repeatFooter": "Repeat footer on each page",
   "reportFontScaleLabel": "Font size:",
+  "rowHeightScaleLabel": "Row height:",
   "timelineColumnsLabel": "Timeline over:",
   "timelineColumnsHint": "Only with auto-fit",
   "timelineColumns_one": "{{count}} page",

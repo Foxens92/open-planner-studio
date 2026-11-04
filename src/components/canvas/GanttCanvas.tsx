@@ -70,7 +70,7 @@ import { useGanttPointerCoordinator } from './hooks/useGanttPointerCoordinator';
 import { editableSplitPieces } from './hooks/useBarDrag';
 import { removeGap } from '@/engine/scheduler/splitEdit';
 import { useGanttRowDragBridge } from './ganttRowDragBridge';
-import { TASK_ROW_HEIGHT } from '@/engine/taskGrid/rowHeight';
+import { taskBarRowHeight, taskRowHeight } from '@/engine/taskGrid/rowHeight';
 // Dikte van de zwevende balken: één gedeelde waarde met de takenlijst (zie scrollExtent.ts).
 import { OVERLAY_SCROLLBAR_SIZE } from '@/engine/taskGrid/scrollExtent';
 import { GANTT_WORKSPACE_SPLITTER_GRIP } from './ganttSplitter';
@@ -78,10 +78,9 @@ import type { GanttTooltipState, HistogramRenderInput } from './hooks/ganttCoord
 import { shownFinish, shownStart } from '@/utils/taskDates';
 import { Icon } from '@/components/icons';
 
-// Basisgeometrie op Tekengrootte 100%: de component leidt hieruit de EFFECTIEVE
-// `rowHeight`/`headerHeight` af (× ui.uiFontScale/100) — gebruik binnen de component die geschaalde
-// waarden, nooit deze constanten direct, anders lopen tekenen en hit-testen uit de pas.
-const ROW_HEIGHT = TASK_ROW_HEIGHT; // gedeeld met FullTaskGrid (`taskGrid/rowHeight.ts`)
+// Basisgeometrie op Tekengrootte 100%: de component leidt hieruit de EFFECTIEVE `headerHeight` af
+// (× ui.uiFontScale/100); de rijhoogte komt uit `taskRowHeight` (gedeeld met FullTaskGrid). Gebruik
+// binnen de component de geschaalde waarden, anders lopen tekenen en hit-testen uit de pas.
 const HEADER_HEIGHT = 50;
 // Breedte van de sleepbare ratio-balk tussen de twee panes — de mini-map-strook eronder laat
 // exact dezelfde tussenruimte, anders schuift hij t.o.v. zijn pane.
@@ -200,7 +199,11 @@ export function GanttCanvas({
   // rekenen met dezelfde geschaalde waarden, zodat tekenen en aanwijzen op de pixel blijven kloppen.
   const uiFontScale = useAppStore(s => s.ui.uiFontScale);
   const fontScale = uiFontScale / 100;
-  const rowHeight = Math.round(ROW_HEIGHT * fontScale);
+  // Rijhoogte-instelling bovenop de tekengrootte; zelfde functie als het taakraster. De balken
+  // houden de dikte van de rij bij 100% (`barRowHeight`).
+  const rowHeightScale = useAppStore(s => s.ui.rowHeightScale);
+  const rowHeight = taskRowHeight(uiFontScale, rowHeightScale);
+  const barRowHeight = taskBarRowHeight(uiFontScale);
   const headerHeight = Math.round(HEADER_HEIGHT * fontScale);
   const weekStartDay = useAppStore(s => s.ui.weekStartDay);
   const enableQuarterHourZoom = useAppStore(s => s.ui.enableQuarterHourZoom);
@@ -664,6 +667,7 @@ export function GanttCanvas({
     baselineComparisons,
     trace,
     rowHeight,
+    barRowHeight,
     headerHeight,
     localizedMonths,
     localizedWeekdays,
@@ -686,7 +690,7 @@ export function GanttCanvas({
     axis: sharedAxis,
     fontFamily: canvasFontFamily,
     fontScale,
-  }), [viewRows, sequences, calendar, effectiveView, selectedTaskIds, cpmResult, statusDate, showStatusDateLine, showProgressLine, showResourceAccent, showFloatBand, barColorSelection, activityCodeTypes, customFieldDefs, taskTypeLabels, resources, assignments, showBaselineOverlay, baselineOverlay, baselineComparisons, trace, rowHeight, headerHeight, localizedMonths, localizedWeekdays, weekStartDay, timeNotation, dateNotation, enableQuarterHourZoom, effectiveCalById, barSplitMode, durationDisplay, workdayDurationMeasure, durationSuffixes, tTask, durationDrag, uiTheme, compressNonWorkdays, sharedAxis, canvasFontFamily, fontScale]);
+  }), [viewRows, sequences, calendar, effectiveView, selectedTaskIds, cpmResult, statusDate, showStatusDateLine, showProgressLine, showResourceAccent, showFloatBand, barColorSelection, activityCodeTypes, customFieldDefs, taskTypeLabels, resources, assignments, showBaselineOverlay, baselineOverlay, baselineComparisons, trace, rowHeight, barRowHeight, headerHeight, localizedMonths, localizedWeekdays, weekStartDay, timeNotation, dateNotation, enableQuarterHourZoom, effectiveCalById, barSplitMode, durationDisplay, workdayDurationMeasure, durationSuffixes, tTask, durationDrag, uiTheme, compressNonWorkdays, sharedAxis, canvasFontFamily, fontScale]);
 
   // Secondary houdt exact zijn eigen zoom/scrollX en deelt rows/scrollY met primary.
   const secondaryRenderInput = useMemo<GanttRenderOptionsSourceInput | undefined>(() => (
@@ -718,6 +722,7 @@ export function GanttCanvas({
       baselineComparisons,
       trace,
       rowHeight,
+      barRowHeight,
       headerHeight,
       localizedMonths,
       localizedWeekdays,
@@ -744,7 +749,7 @@ export function GanttCanvas({
       fontFamily: canvasFontFamily,
       fontScale,
     } : undefined
-  ), [splitView, viewRows, sequences, calendar, effectiveView, selectedTaskIds, cpmResult, statusDate, showStatusDateLine, showProgressLine, showResourceAccent, showFloatBand, barColorSelection, activityCodeTypes, customFieldDefs, taskTypeLabels, resources, assignments, showBaselineOverlay, baselineOverlay, baselineComparisons, trace, rowHeight, headerHeight, localizedMonths, localizedWeekdays, weekStartDay, timeNotation, dateNotation, enableQuarterHourZoom, effectiveCalById, barSplitMode, workdayDurationMeasure, tTask, uiTheme, compressNonWorkdays, canvasFontFamily, fontScale]);
+  ), [splitView, viewRows, sequences, calendar, effectiveView, selectedTaskIds, cpmResult, statusDate, showStatusDateLine, showProgressLine, showResourceAccent, showFloatBand, barColorSelection, activityCodeTypes, customFieldDefs, taskTypeLabels, resources, assignments, showBaselineOverlay, baselineOverlay, baselineComparisons, trace, rowHeight, barRowHeight, headerHeight, localizedMonths, localizedWeekdays, weekStartDay, timeNotation, dateNotation, enableQuarterHourZoom, effectiveCalById, barSplitMode, workdayDurationMeasure, tTask, uiTheme, compressNonWorkdays, canvasFontFamily, fontScale]);
 
   useGanttRendererHost({
     containers: {

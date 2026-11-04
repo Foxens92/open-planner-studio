@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useProfileCountsWorkdays } from '@/hooks/useDurationMeasure';
 import { useAppStore } from '@/state/appStore';
 import { useResolvedUITheme } from '@/hooks/useResolvedUITheme';
-import { ResolvedUITheme, UI_THEMES, DocumentChromeStyle, DateNotation, TimeNotation, DurationDisplay, BarSplitMode, UIFontFamily, UI_FONT_FAMILIES, UI_FONT_SCALES, type UIState } from '@/state/slices/types';
-import { saveZoomSettings, saveDebugTerminalEnabled, saveDocumentChromeStyle, saveShowClassicViewControls, saveConstructionMode, saveDateNotation, saveTimeNotation, saveShowTaskTypes, saveAllowMixedDayHour, saveDurationDisplay, saveBarSplitMode, saveCompressNonWorkdays, saveUIFontFamily, saveUIFontScale, saveAiAutostart, saveFormatNoticeHidden, saveRibbonWheelSwitchesTabs } from '@/utils/settingsStore';
+import { ResolvedUITheme, UI_THEMES, DocumentChromeStyle, DateNotation, TimeNotation, DurationDisplay, BarSplitMode, UIFontFamily, UI_FONT_FAMILIES, UI_FONT_SCALES, ROW_HEIGHT_SCALES, type UIState } from '@/state/slices/types';
+import { saveZoomSettings, saveDebugTerminalEnabled, saveDocumentChromeStyle, saveShowClassicViewControls, saveConstructionMode, saveDateNotation, saveTimeNotation, saveShowTaskTypes, saveAllowMixedDayHour, saveDurationDisplay, saveBarSplitMode, saveCompressNonWorkdays, saveUIFontFamily, saveUIFontScale, saveRowHeightScale, saveAiAutostart, saveFormatNoticeHidden, saveRibbonWheelSwitchesTabs } from '@/utils/settingsStore';
 import { FORMAT_NOTICE_KINDS, withFormatNoticeShown } from '@/services/formatNoticeKinds';
 import { applyAiModeLive } from '@/services/mcp/server';
 import { isTauri } from '@/utils/platform';
@@ -59,6 +59,7 @@ export function SettingsPanelContent() {
   const followSystem = currentTheme === 'system';
   const uiFontFamily = useAppStore(s => s.ui.uiFontFamily);
   const uiFontScale = useAppStore(s => s.ui.uiFontScale);
+  const rowHeightScale = useAppStore(s => s.ui.rowHeightScale);
   const enableQuarterHourZoom = useAppStore(s => s.ui.enableQuarterHourZoom);
   const weekStartDay = useAppStore(s => s.ui.weekStartDay);
   const debugTerminalEnabled = useAppStore(s => s.ui.debugTerminalEnabled);
@@ -227,6 +228,17 @@ export function SettingsPanelContent() {
                 options={UI_FONT_SCALES.map(s => ({ value: String(s), label: `${s}%` }))}
               />
               <p className="scrollzoom-hint">{t('settings.fontScaleHint')}</p>
+            </div>
+
+            <div className="settings-section">
+              <h3>{t('settings.rowHeightLabel')}</h3>
+              <Select
+                aria-label={t('settings.rowHeightLabel')}
+                value={String(rowHeightScale)}
+                onChange={v => applySetting('rowHeightScale', Number(v), saveRowHeightScale)}
+                options={ROW_HEIGHT_SCALES.map(s => ({ value: String(s), label: `${s}%` }))}
+              />
+              <p className="scrollzoom-hint">{t('settings.rowHeightHint')}</p>
             </div>
 
             <div className="settings-section">

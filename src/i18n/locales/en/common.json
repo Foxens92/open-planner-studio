@@ -510,6 +510,8 @@
     "fontFamilyLabel": "Font",
     "fontScaleLabel": "Text size",
     "fontScaleHint": "Scales the interface text and layout.",
+    "rowHeightLabel": "Row height",
+    "rowHeightHint": "Height of the rows in the table and the Gantt chart. Bars keep their thickness; a taller row gives more space around them.",
     "fontFamilyDefault": "Default",
     "fontFamilySystem": "System",
     "fontFamilySerif": "Serif",

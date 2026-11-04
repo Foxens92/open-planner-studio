@@ -553,6 +553,10 @@ export async function saveUIFontScale(value: number): Promise<void> {
   await setSetting('uiFontScale', value);
 }
 
+export async function saveRowHeightScale(value: number): Promise<void> {
+  await setSetting('rowHeightScale', value);
+}
+
 // --- Duurinstellingen. App-instellingen, dus onder de 3-plekken-regel
 //     (tandwiel/ribbontab/backstage delen SettingsPanelContent). Ontbrekende/corrupte sleutel ⇒
 //     undefined → de store houdt zijn default (gemengd aan, duurweergave

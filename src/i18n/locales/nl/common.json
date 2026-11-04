@@ -510,6 +510,8 @@
     "fontFamilyLabel": "Lettertype",
     "fontScaleLabel": "Tekengrootte",
     "fontScaleHint": "Schaalt de interface-tekst en -indeling.",
+    "rowHeightLabel": "Rijhoogte",
+    "rowHeightHint": "Hoogte van de rijen in de tabel en de Gantt. De balken blijven even dik; een hogere rij geeft meer ruimte eromheen.",
     "fontFamilyDefault": "Standaard",
     "fontFamilySystem": "Systeem",
     "fontFamilySerif": "Met schreef",

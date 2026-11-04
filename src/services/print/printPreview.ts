@@ -540,6 +540,9 @@ interface ReportMetrics {
   /** `font(9)` / `font(9, true)` → de CSS-fontstring met de geschaalde puntgrootte. */
   font(size: number, bold?: boolean): string;
   rowHeight: number;
+  /** Rijhoogte waarop de balken gemaakt zijn: die bij rijhoogte 100% (zie `PrintOptions.rowHeightScale`).
+   *  Een hogere rij geeft lucht rond een even dikke balk; een lagere rij een dunnere balk. */
+  barRowHeight: number;
   projectHeaderHeight: number;
   timelineHeaderHeight: number;
   totalHeaderHeight: number;
@@ -554,6 +557,10 @@ interface ReportMetrics {
  * snapt ernaartoe.
  */
 export const REPORT_FONT_SCALES = [90, 100, 110, 125] as const;
+
+/** De aangeboden rijhoogtes van de Gantt-afdruk (percentage van de normale rij); zelfde rol als
+ *  {@link REPORT_FONT_SCALES}. */
+export const REPORT_ROW_HEIGHT_SCALES = [75, 100, 125, 150, 175, 200] as const;
 
 /**
  * Bouw de {@link ReportMetrics} voor een render. `reportFontScale` is een PERCENTAGE; ontbreekt hij
@@ -572,9 +579,12 @@ function makeMetrics(
   curveColumnWidth?: number,
   columnWidths?: TableColumnWidths,
   fontStack: string = DEFAULT_REPORT_FONT_STACK,
+  rowHeightScale?: number,
 ): ReportMetrics {
   const pct = snapToChoice(REPORT_FONT_SCALES, reportFontScale ?? 100) ?? 100;
   const k = pct / 100;
+  // Rijhoogte bovenop de lettergrootte; snapt net als de lettergrootte naar een aangeboden waarde.
+  const rowK = (snapToChoice(REPORT_ROW_HEIGHT_SCALES, rowHeightScale ?? 100) ?? 100) / 100;
   const widths = resolveColumnWidths(taskNameColumnWidth, curveColumnWidth, columnWidths);
   const projectHeaderHeight = PROJECT_HEADER_HEIGHT * k;
   const timelineHeaderHeight = TIMELINE_HEADER_HEIGHT * k;
@@ -582,7 +592,8 @@ function makeMetrics(
     k,
     s: (v) => v * k,
     font: (size, bold) => `${bold ? 'bold ' : ''}${size * k}px ${fontStack}`,
-    rowHeight: ROW_HEIGHT * k,
+    rowHeight: ROW_HEIGHT * k * rowK,
+    barRowHeight: ROW_HEIGHT * k * Math.min(1, rowK),
     projectHeaderHeight,
     timelineHeaderHeight,
     // Bewust de SOM van de twee geschaalde hoogtes, niet `(PROJECT + TIMELINE) * k`: alleen zo valt
@@ -728,6 +739,12 @@ export interface PrintOptions {
    * bij {@link ReportMetrics}, want uniform schalen zou onder de fit-width-pagineerder niets doen.
    */
   reportFontScale?: number;
+  /**
+   * Rijhoogte van de Gantt-afdruk als percentage van de normale rij (bovenop `reportFontScale`).
+   * 100 (of ontbrekend) = ongewijzigd. Balken, ruiten en baselinestrook houden de dikte van de rij
+   * bij 100% en staan in het midden van een hogere rij; bij een lagere rij worden ze dunner.
+   */
+  rowHeightScale?: number;
   /**
    * CSS-fontstack van alle rapporttekst op het canvas (preview, raster-export). Ontbreekt ⇒ het
    * gevendorde Inter (`DEFAULT_REPORT_FONT_STACK`), dus dan tekent de render exact als voorheen.
@@ -976,12 +993,12 @@ export function renderReport(
   const paper = toPaperSize(options.paperSize);
   const printableWidth = printableWidthLogicalPx(paper, options.orientation);
   let assignmentColumns = !!options.assignmentColumns;
-  let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily);
+  let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily, options.rowHeightScale);
   let assignmentColumnsDropped = false;
   if (assignmentColumns && m.tableWidth > printableWidth - minChartWidthPx(printableWidth)) {
     assignmentColumns = false;
     assignmentColumnsDropped = true;
-    m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, false, undefined, options.columnWidths, options.fontFamily);
+    m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, false, undefined, options.columnWidths, options.fontFamily, options.rowHeightScale);
   }
 
   // Rijen-bron: zie {@link buildPrintRows} — taakrijen mét diepte plus groepsband-rijen die
@@ -1307,7 +1324,8 @@ export function renderReport(
   }
 
   // Task bars
-  const barHeight = m.rowHeight * 0.55;
+  // De balk hoort bij de rij van 100%; een hogere rij (rijhoogte-instelling) centreert hem.
+  const barHeight = m.barRowHeight * 0.55;
   const barOffset = (m.rowHeight - barHeight) / 2;
 
   // De taaknaam-labels worden hier alleen VERZAMELD en pas ná de relatiepijlen getekend — zie de

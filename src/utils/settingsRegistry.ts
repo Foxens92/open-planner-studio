@@ -33,6 +33,7 @@ import {
   BAR_SPLIT_MODES,
   UI_FONT_FAMILIES,
   UI_FONT_SCALES,
+  ROW_HEIGHT_SCALES,
 } from '@/state/slices/types';
 import type {
   WeekStartDay,
@@ -195,6 +196,8 @@ export const SETTINGS: SettingDescriptor[] = [
   // — zodat een geladen waarde gegarandeerd overeenkomt met een aanwijsbare optie.
   setting({ key: 'uiFontFamily', field: 'uiFontFamily', parse: parseEnum(UI_FONT_FAMILIES) }),
   setting({ key: 'uiFontScale', field: 'uiFontScale', parse: parseNumberChoice(UI_FONT_SCALES) }),
+  // Rijhoogte van raster en tijdlijn, snapt net als de tekengrootte naar een optie van de keuzelijst.
+  setting({ key: 'rowHeightScale', field: 'rowHeightScale', parse: parseNumberChoice(ROW_HEIGHT_SCALES) }),
 
   // Urenplanning
   setting({ key: 'showTaskTypes', field: 'showTaskTypes', parse: parseBoolean }),

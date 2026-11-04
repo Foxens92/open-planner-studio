@@ -481,6 +481,8 @@
     "fontFamilyLabel": "Police",
     "fontScaleLabel": "Taille du texte",
     "fontScaleHint": "Redimensionne le texte et la mise en page de l'interface.",
+    "rowHeightLabel": "Hauteur de ligne",
+    "rowHeightHint": "Hauteur des lignes du tableau et du Gantt. Les barres gardent leur épaisseur ; une ligne plus haute donne plus d'espace autour.",
     "fontFamilyDefault": "Par défaut",
     "fontFamilySystem": "Système",
     "fontFamilySerif": "Serif",

@@ -146,6 +146,8 @@ export interface GanttRenderOptions {
   canvasWidth: number;
   canvasHeight: number;
   rowHeight: number;
+  /** Rijhoogte waarop de balken gemaakt zijn (`taskBarRowHeight`); afwezig ⇒ `rowHeight`. */
+  barRowHeight?: number;
   headerHeight: number;
   localizedMonths?: string[];
   /** 7 weekdag-afkortingen, geïndexeerd op d.getUTCDay() (0=zondag … 6=zaterdag). Alleen gebruikt
@@ -381,6 +383,7 @@ export class GanttRenderer {
     // Accent én baselines samen maken de balken van de hele weergave iets lager (besluit
     // 2026-10-20, zie `barLayout`). "Baselines" = de overlay staat aan en er is iets te tekenen.
     this.bar = barLayout(opts.rowHeight, {
+      barRowHeight: opts.barRowHeight,
       resourceAccent: !!opts.showResourceAccent,
       baselines: opts.showBaselineOverlay !== false
         && (!!opts.baselineOverlay || (opts.baselineComparisons?.length ?? 0) > 0),

@@ -23,7 +23,7 @@
 import { getSetting, setSetting } from '@/utils/settingsStore';
 import { snapToChoice } from '@/utils/numberChoice';
 import { parseBoolean, parseClampedInt, parseEnum } from '@/utils/settingParsers';
-import { NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, REPORT_FONT_SCALES, REPORT_MAX_ZOOM, REPORT_MIN_ZOOM } from '@/services/print/printPreview';
+import { NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, REPORT_FONT_SCALES, REPORT_MAX_ZOOM, REPORT_ROW_HEIGHT_SCALES, REPORT_MIN_ZOOM } from '@/services/print/printPreview';
 import {
   REPORTING_PERIOD_PRESETS, type ReportingPeriod, isIsoDay, weeksToPreset,
 } from '@/engine/reports/reportingPeriod';
@@ -201,6 +201,8 @@ export interface ReportSettings {
   repeatFooter: boolean;
   timelineColumns: number;
   reportFontScale: number;
+  /** Rijhoogte van de Gantt-afdruk in procent (`REPORT_ROW_HEIGHT_SCALES`). */
+  rowHeightScale: number;
   /** Statuslijn in de export: drie opties. */
   statusLine: 'none' | 'statusDate' | 'progress';
   /** Export volgt de schermweergave — filter, groepering, sortering én inklapstatus. */
@@ -242,6 +244,7 @@ export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
   repeatFooter: true,
   timelineColumns: 1,
   reportFontScale: 100,
+  rowHeightScale: 100,
   statusLine: 'none',
   followView: false,
   previewQuality: '200',
@@ -368,6 +371,7 @@ export async function loadReportSettings(): Promise<ReportSettings> {
     timelineColumns: parseClampedInt(s.timelineColumns, TIMELINE_COLUMNS_MIN, TIMELINE_COLUMNS_MAX) ?? d.timelineColumns,
     // `snapToChoice`: dezelfde "getal buiten de keuzelijst"-semantiek als de settings-loader.
     reportFontScale: snapToChoice(FONT_SCALES, s.reportFontScale) ?? d.reportFontScale,
+    rowHeightScale: snapToChoice(REPORT_ROW_HEIGHT_SCALES, s.rowHeightScale) ?? d.rowHeightScale,
     statusLine: parseEnum(STATUS_LINES, s.statusLine) ?? d.statusLine,
     followView: parseBoolean(s.followView) ?? d.followView,
     // Een opgeslagen `previewZoom` (oudere versie) wordt bewust genegeerd: de preview verandert

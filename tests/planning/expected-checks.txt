@@ -331,6 +331,7 @@ check-resttempo.ts matrix
 check-restwerk-duurwijziging.ts matrix
 check-ribbon-overlays.ts matrix
 check-row-drag-intent.ts matrix
+check-row-height-setting.ts matrix
 check-run-ts-cleanup.ts matrix
 check-save-failure-status.ts matrix
 check-saved-filters.ts matrix

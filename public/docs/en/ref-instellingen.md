@@ -22,6 +22,8 @@ A change takes effect immediately. There is no *Apply* button and no *Cancel*.
 
 **Text size** — scale of the interface. Choose from 90%, 100%, 110% and 125%. Default: 100%. Effect: the text and layout of the ribbon, the panels and the dialogs get larger or smaller, and the row height of the table and the Gantt scales along. There is no choice above 125%, because button labels in the ribbon then break over several lines. Where: *Appearance*.
 
+**Row height** — height of the rows in the table and the Gantt chart, on top of *Text size*. Choice from 75% to 200% in steps of 25%. Default: 100%. Effect: a taller row gives more space around the bars; the bars keep their thickness. At 75% the bars get thinner, because they have to fit in the row. Independent of the *Row height:* of the printout. Where: *Appearance*.
+
 **Date format** — how dates appear in the app. Choose from *dd-mm-yyyy*, *mm-dd-yyyy* and *yyyy-mm-dd*. Default: *dd-mm-yyyy*. Effect: dates in the table, the dialogs, the reports and the print. Files and calculations do not change: only the display. Where: *Appearance*.
 
 **Time format** — how clock times appear in the app. Choose from *24-hour (13:00)* and *12-hour (1:00 PM)*. Default: *24-hour (13:00)*. Effect: the times in the calendar window, the date and time of tasks in hours (table, splits, messages) and the *Hour* timescale in the Gantt. In a time field you may type either form: *13:00*, *1300*, *13*, *1:00 PM* or *1 pm*. Midnight as the end of the day is *24:00* or *12:00 AM*. Files and calculations do not change: they stay 24-hour. Where: *Appearance*.

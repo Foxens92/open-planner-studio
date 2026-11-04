@@ -25,6 +25,12 @@ export interface BarLayoutOptions {
   resourceAccent?: boolean;
   /** De baseline-overlay staat aan en er is een baseline om te tekenen. */
   baselines?: boolean;
+  /**
+   * Rijhoogte waarop de balk gemaakt is (de rij bij rijhoogte 100%, `taskBarRowHeight`). Is de rij
+   * hoger, dan houdt de balk de dikte van die rij en staat hij met accent en baselinestrook in het
+   * midden; is de rij lager, dan geldt de rij zelf. Afwezig ⇒ de rij zelf (het oude gedrag).
+   */
+  barRowHeight?: number;
 }
 
 /** Ondergrens van de balkhoogte als accent en baselinestrook samen onder de balk staan. */
@@ -51,6 +57,16 @@ export const MIN_BAR_HEIGHT_PX = 6;
  * Staat maar één van beide aan, of geen, dan is de geometrie dezelfde als zonder opties.
  */
 export function barLayout(rowHeight: number, options: BarLayoutOptions = {}): BarLayout {
+  const basis = options.barRowHeight !== undefined && Number.isFinite(options.barRowHeight) && options.barRowHeight > 0
+    ? Math.min(rowHeight, options.barRowHeight)
+    : rowHeight;
+  const inner = barLayoutInRow(basis, options);
+  // Extra rijhoogte gaat gelijk boven en onder het blok balk + accent + baseline.
+  const extra = (rowHeight - basis) / 2;
+  return extra > 0 ? { ...inner, barOffset: inner.barOffset + extra } : inner;
+}
+
+function barLayoutInRow(rowHeight: number, options: BarLayoutOptions): BarLayout {
   const normalBar = rowHeight * BAR_HEIGHT_RATIO;
   const normalOffset = (rowHeight - normalBar) / 2;
   const strip = Math.max(0, normalOffset - 1);

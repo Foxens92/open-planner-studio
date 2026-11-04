@@ -35,6 +35,7 @@
   "repeatHeader": "Kop op elke pagina herhalen",
   "repeatFooter": "Voet op elke pagina herhalen",
   "reportFontScaleLabel": "Lettergrootte:",
+  "rowHeightScaleLabel": "Rijhoogte:",
   "timelineColumnsLabel": "Tijdlijn over:",
   "timelineColumnsHint": "Alleen bij automatische passing",
   "timelineColumns_one": "{{count}} pagina",

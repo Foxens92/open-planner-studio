@@ -101,6 +101,7 @@ export function createDefaultUI(): UIState {
     // opstart uit localStorage).
     uiFontFamily: 'default',
     uiFontScale: 100,
+    rowHeightScale: 100,
     enableQuarterHourZoom: false,
     weekStartDay: 'monday',
     // 'drag' (zoom + slepen, map-style) is de standaard: het is de meest

@@ -128,6 +128,10 @@ export const UI_FONT_FAMILIES: UIFontFamily[] = ['default', 'system', 'serif', '
 // breken. 125 is de grens waarop dat nog acceptabel bleef in een echte browsercontrole.
 export const UI_FONT_SCALES: number[] = [90, 100, 110, 125];
 
+// Rijhoogte van taakraster en Gantt-tijdlijn als percentage van de normale rij (bovenop de
+// tekengrootte). Balken houden hun dikte; de rij krijgt meer of minder lucht (zie `barLayout`).
+export const ROW_HEIGHT_SCALES: number[] = [75, 100, 125, 150, 175, 200];
+
 // Hoe de gebruiker tussen meerdere geopende documenten wisselt (multi-document).
 // 'tabs'     — horizontale tabstrip onder het lint (default, browser/Excel-stijl)
 // 'rail'     — verticale projectbalk links (VS Code activity-bar-stijl)
@@ -615,6 +619,7 @@ export interface UIState {
   systemPrefersDark: boolean;
   uiFontFamily: UIFontFamily; // persisted — interface-lettertypefamilie; 'default' = stylesheet-defaults
   uiFontScale: number;        // persisted — interface-lettertypegrootte als schaalpercentage (90|100|110|125)
+  rowHeightScale: number;     // persisted — rijhoogte raster + Gantt in procent (ROW_HEIGHT_SCALES)
   enableQuarterHourZoom: boolean;
   weekStartDay: WeekStartDay;
   scrollMode: ScrollMode;             // persisted — wheel behavior mode

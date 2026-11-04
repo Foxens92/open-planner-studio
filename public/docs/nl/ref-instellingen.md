@@ -22,6 +22,8 @@ Een wijziging werkt direct. Er is geen knop *Toepassen* en geen *Annuleren*.
 
 **Tekengrootte** — schaal van de interface. Keuze uit 90%, 100%, 110% en 125%. Standaard: 100%. Effect: tekst en indeling van het lint, de panelen en dialogen worden groter of kleiner, en de rijhoogte van de tabel en de Gantt schaalt mee. Boven 125% is er geen keuze, omdat de knoplabels in het lint dan over meerdere regels breken. Waar: *Weergave*.
 
+**Rijhoogte** — hoogte van de rijen in de tabel en de Gantt, bovenop de *Tekengrootte*. Keuze van 75% tot 200% in stappen van 25%. Standaard: 100%. Effect: een hogere rij geeft meer ruimte rond de balken; de balken blijven even dik. Bij 75% worden de balken dunner, omdat ze in de rij moeten passen. Los van de *Rijhoogte:* van de afdruk. Waar: *Weergave*.
+
 **Datumnotatie** — hoe datums in de app staan. Keuze uit *dd-mm-jjjj*, *mm-dd-jjjj* en *jjjj-mm-dd*. Standaard: *dd-mm-jjjj*. Effect: datums in de tabel, de dialogen, de rapporten en de afdruk. Bestanden en berekeningen veranderen niet: alleen de weergave. Waar: *Weergave*.
 
 **Tijdnotatie** — hoe kloktijden in de app staan. Keuze uit *24 uur (13:00)* en *12 uur (1:00 PM)*. Standaard: *24 uur (13:00)*. Effect: de tijden in het kalendervenster, de datum met tijd van taken in uren (tabel, splitsingen, meldingen) en de tijdschaal *Uur* in de Gantt. In een tijdveld mag je beide vormen typen: *13:00*, *1300*, *13*, *1:00 PM* of *1 pm*. Middernacht als einde van de dag is *24:00* of *12:00 AM*. Bestanden en berekeningen veranderen niet: die blijven 24 uur. Waar: *Weergave*.
