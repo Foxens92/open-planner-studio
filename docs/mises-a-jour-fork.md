@@ -51,3 +51,34 @@ au démarrage.
   Actions du dépôt.
 - Les versions publiées par OpenAEC ne sont plus proposées. Pour intégrer leurs nouveautés, il faut
   les fusionner dans ce dépôt puis publier ta propre version.
+
+## Tester dans le navigateur : le lanceur du bureau
+
+Une fois, dans le Terminal, depuis le dossier du projet :
+
+```bash
+git pull
+cp "scripts/mac/Open Planner Studio.command" ~/Desktop/
+```
+
+Ensuite, un double-clic sur **Open Planner Studio** (bureau) récupère les dernières modifications,
+démarre l'application et l'ouvre dans le navigateur. Laisse la fenêtre du Terminal ouverte pendant
+le test ; la fermer arrête l'application. Si l'application tourne déjà, le double-clic ouvre
+simplement le navigateur. La première fois, le lanceur peut demander où se trouve le dossier du
+projet ; il s'en souvient ensuite (`~/.open-planner-studio-dossier`).
+
+## Une version par modification
+
+Chaque modification est enregistrée comme une nouvelle version (`2026.45.1`, `2026.45.2`…) avec une
+étiquette `fox-v<version>` sur GitHub (`scripts/nouvelle-version.sh`). Pour revenir en arrière :
+
+```bash
+git fetch --tags
+git tag -l "fox-v*"                      # liste des versions
+git checkout fox-v2026.45.1              # se placer sur une version pour la tester
+git checkout claude/loving-brahmagupta-h0v95j   # revenir à la dernière version
+```
+
+Sur une ancienne version, le lanceur ne fait pas de mise à jour automatique : il lance exactement
+cette version. Pour annuler définitivement une modification, demande-le : elle sera défaite dans une
+nouvelle version, sans réécrire l'historique.
