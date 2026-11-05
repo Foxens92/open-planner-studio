@@ -126,7 +126,22 @@ export const UI_FONT_FAMILIES: UIFontFamily[] = ['default', 'system', 'serif', '
 // dat niet álle chrome meebeweegt: vaste px-hoogtes/-breedtes in losse componenten en de
 // canvas-geometrie blijven staan, en boven ~125% gaan knoplabels in het lint over meerdere regels
 // breken. 125 is de grens waarop dat nog acceptabel bleef in een echte browsercontrole.
-export const UI_FONT_SCALES: number[] = [90, 100, 110, 125];
+// Sinds 2026-11-04 (eigenaar) stelt de gebruiker de tekengrootte in PIXELS in: de grootte van de
+// gewone tekstrol `body` (11 px bij 100 %). Intern blijft `uiFontScale` een percentage (CSS-variabele
+// `--ui-font-scale`, canvas `fontScale`), nu een vrij getal binnen het bereik in plaats van een
+// keuze uit vier. Bovengrens 14 px (≈127 %): de knoplabels in het lint begonnen boven ~125 % te breken.
+export const UI_TEXT_BASE_PX = 11;
+export const UI_TEXT_PX_MIN = 9;
+export const UI_TEXT_PX_MAX = 14;
+export const UI_TEXT_PX_STEP = 0.5;
+export const UI_FONT_SCALE_MIN = (UI_TEXT_PX_MIN / UI_TEXT_BASE_PX) * 100;
+export const UI_FONT_SCALE_MAX = (UI_TEXT_PX_MAX / UI_TEXT_BASE_PX) * 100;
+
+// Rijhoogte van taakraster en Gantt-tijdlijn in pixels (eigenaarsbesluit 2026-11-04). `null` =
+// automatisch: 32 px × tekengrootte, het gedrag van vóór de instelling. Balken houden de dikte van de
+// automatische rij; een hogere rij krijgt meer lucht (zie `barLayout`).
+export const ROW_HEIGHT_PX_MIN = 22;
+export const ROW_HEIGHT_PX_MAX = 96;
 
 // Hoe de gebruiker tussen meerdere geopende documenten wisselt (multi-document).
 // 'tabs'     — horizontale tabstrip onder het lint (default, browser/Excel-stijl)
@@ -614,7 +629,8 @@ export interface UIState {
    *  instelling) en is alleen betekenisvol samen met `uiTheme`: zie `resolveUITheme`. */
   systemPrefersDark: boolean;
   uiFontFamily: UIFontFamily; // persisted — interface-lettertypefamilie; 'default' = stylesheet-defaults
-  uiFontScale: number;        // persisted — interface-lettertypegrootte als schaalpercentage (90|100|110|125)
+  uiFontScale: number;        // persisted — interface-lettertypegrootte als schaalpercentage (UI_FONT_SCALE_MIN..MAX)
+  rowHeightPx: number | null; // persisted — rijhoogte raster + Gantt in px; null = automatisch (32 px × tekengrootte)
   enableQuarterHourZoom: boolean;
   weekStartDay: WeekStartDay;
   scrollMode: ScrollMode;             // persisted — wheel behavior mode

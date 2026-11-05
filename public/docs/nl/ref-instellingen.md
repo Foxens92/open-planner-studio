@@ -20,7 +20,9 @@ Een wijziging werkt direct. Er is geen knop *Toepassen* en geen *Annuleren*.
 
 **Lettertype** — het lettertype van de hele interface. Keuze uit *Standaard*, *Systeem*, *Met schreef* en *Monospace*. Standaard: *Standaard*. Effect: koppen en tekst in het venster, en de tekst in de Gantt en het histogram. Een webapp volgt het lettertype van je systeem niet vanzelf; daarom kies je het hier. Waar: *Weergave*.
 
-**Tekengrootte** — schaal van de interface. Keuze uit 90%, 100%, 110% en 125%. Standaard: 100%. Effect: tekst en indeling van het lint, de panelen en dialogen worden groter of kleiner, en de rijhoogte van de tabel en de Gantt schaalt mee. Boven 125% is er geen keuze, omdat de knoplabels in het lint dan over meerdere regels breken. Waar: *Weergave*.
+**Tekengrootte** — grootte van de gewone interfacetekst, in px. Van 9 tot 14 px, in stappen van 0,5. Standaard: 11 px (100 %). Effect: tekst en indeling van het lint, de panelen en dialogen worden groter of kleiner, en zolang *Rijhoogte* op standaard staat schaalt de rijhoogte van de tabel en de Gantt mee. Boven 14 px is er geen keuze, omdat de knoplabels in het lint dan over meerdere regels breken. De knop *Standaard (100 %, 11 px)* zet de waarde terug. Waar: *Weergave*.
+
+**Rijhoogte** — hoogte van de rijen in de tabel en de Gantt, in px. Van 22 tot 96 px. Standaard: automatisch, 32 px bij een tekengrootte van 11 px. Effect: een hogere rij geeft meer ruimte rond de balken; de balken blijven even dik. Een lagere rij maakt de balken dunner, omdat ze in de rij moeten passen. Een eigen waarde blijft staan als je de tekengrootte wijzigt; de knop *Standaard (100 %, … px)* zet de rij terug op automatisch. Los van de *Rijhoogte:* van de afdruk. Waar: *Weergave*.
 
 **Datumnotatie** — hoe datums in de app staan. Keuze uit *dd-mm-jjjj*, *mm-dd-jjjj* en *jjjj-mm-dd*. Standaard: *dd-mm-jjjj*. Effect: datums in de tabel, de dialogen, de rapporten en de afdruk. Bestanden en berekeningen veranderen niet: alleen de weergave. Waar: *Weergave*.
 

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useEffectiveDurationDisplay, useProfileCountsWorkdays } from '@/hooks/useDurationMeasure';
 import { useAppStore } from '@/state/appStore';
 import { useTranslation } from 'react-i18next';
-import { buildPrintRows, curveCellFont, measureCurveColumnWidth, measurePrintReport, measureTableColumnWidths, measureTaskNameColumnWidth, nameCellFont, NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, renderPrintCanvas, renderPrintPreviewPage, renderReport, REPORT_FONT_SCALES, REPORT_MAX_ZOOM, REPORT_MIN_ZOOM, PrintOptions, TableColumnWidths, TableHeaderLabels } from '@/services/print/printPreview';
+import { buildPrintRows, curveCellFont, measureCurveColumnWidth, measurePrintReport, measureTableColumnWidths, measureTaskNameColumnWidth, nameCellFont, NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MAX, NAME_COLUMN_WIDTH_MIN, renderPrintCanvas, renderPrintPreviewPage, renderReport, REPORT_MAX_ZOOM, REPORT_MIN_ZOOM, REPORT_ROW_PX_MAX, REPORT_ROW_PX_MIN, REPORT_TEXT_BASE_PX, REPORT_TEXT_PX_MAX, REPORT_TEXT_PX_MIN, REPORT_TEXT_PX_STEP, reportAutoRowHeightPx, PrintOptions, TableColumnWidths, TableHeaderLabels } from '@/services/print/printPreview';
 import { computePreviewRasterLimits } from '@/services/print/previewSafety';
 import { getLocalizedMonths, getLocalizedMonthsShort } from '@/i18n/dateFormat';
 import { documentFileBase } from '@/utils/documents';
@@ -10,7 +10,8 @@ import { documentProjectCode } from '@/utils/documentProjectCode';
 import { nameWithProjectCode } from '@/utils/projectCodeName';
 import { computeHighResScale } from '@/utils/miniPdf';
 import { paginateCanvasToPdfBytes, type PaginateOptions } from '@/services/print/paginate';
-import { computeTileLayout, footerLayoutWidthFor } from '@/services/print/tileLayout';
+import { PxSizeField } from '@/components/common/PxSizeField';
+import { computeTileLayout, footerLayoutWidthFor, rollRunsAlongTimeline, toPaperSize } from '@/services/print/tileLayout';
 import { ensureInterLoaded, getInterFontBytes, getArabicFontBytes } from '@/services/pdf/fontLoader';
 import { RTL_LOCALES, type Locale } from '@/i18n/config';
 import { Select } from '@/components/common/Select';
@@ -25,16 +26,16 @@ import { saveBytesDialog } from '@/services/fileAccess';
 import {
   DEFAULT_REPORT_SETTINGS, isGanttReportType, loadReportSettings, reportTypeDrawsRelations, reportTypeShowsCriticalToggle, saveReportSettings,
   TABLE_REPORT_TYPES,
-  type ReportType, type ResourceGanttReportOptions, type TableReportOptions,
+  type ReportPaperSize, type ReportType, type ResourceGanttReportOptions, type TableReportOptions,
 } from '@/utils/reportSettings';
-import { computeResourceGanttRows } from '@/engine/reports';
+import { computeResourceGanttRows, type ReportingPeriod } from '@/engine/reports';
 import { countCriticalActivities } from '@/engine/scheduler/scheduleAnalysis';
 import { durationSuffixesFrom } from '@/utils/taskDuration';
 import type { ViewRow } from '@/engine/view/visibleRows';
 import { TableReportView } from './reports/TableReportView';
 import { ReportingPeriodField, useResolvedPeriod } from './reports/ReportingPeriodField';
 import { TableReportOptionsBlock } from './reports/TableReportOptionsBlock';
-import { OrientationSelect, PaperSizeSelect, ReportCheckRow, ReportFieldRow, ReportOptionsCard } from './reports/reportFormPrimitives';
+import { OrientationSelect, PaperSizeSelect, ReportCheckRow, ReportFieldRow, ReportOptionsCard, RollPaperHint } from './reports/reportFormPrimitives';
 import { useTableReportSpec } from './reports/useTableReportSpec';
 import { toPdfSpec } from './reports/tableReportSpec';
 import { useTaskIdDateText, type TaskIdDateText } from '@/hooks/displayDate';
@@ -332,11 +333,15 @@ export function ReportPanel() {
   const [showBaselineOverlay, setShowBaselineOverlay] = useState(DEFAULT_REPORT_SETTINGS.showBaselineOverlay);
   const [autoFit, setAutoFit] = useState(DEFAULT_REPORT_SETTINGS.autoFit);
   const [customZoom, setCustomZoom] = useState(DEFAULT_REPORT_SETTINGS.customZoom);
-  const [paperSize, setPaperSize] = useState<'A4' | 'A3' | 'A2' | 'A1'>(DEFAULT_REPORT_SETTINGS.paperSize);
+  const [paperSize, setPaperSize] = useState<ReportPaperSize>(DEFAULT_REPORT_SETTINGS.paperSize);
   // Reden waarom de laatste export-poging is afgebroken (alleen een CPM-cyclus).
   // Het CPM-resultaat met de fout, niet de tekst: vertaald bij het tonen, dus ook na een taalwissel.
   const [exportError, setExportError] = useState<Pick<CPMResult, 'error' | 'errorInfo'> | null>(null);
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>(DEFAULT_REPORT_SETTINGS.orientation);
+  // Plotterrol in landscape: de band loopt langs de tijdlijn, dus geen Auto-fit (de keuze zelf blijft
+  // bewaard voor wie terugwisselt naar een vel).
+  const rollAlongTimeline = rollRunsAlongTimeline(toPaperSize(paperSize), orientation);
+  const effectiveAutoFit = autoFit && !rollAlongTimeline;
   // Bewust NIET persistent: de bedrijfsnaam komt uit het PROJECT (`project.company`). Zie de
   // toelichting bovenin `src/utils/reportSettings.ts` — globaal bewaren zou het bedrijf van het ene
   // project in het rapport van het andere laten opduiken.
@@ -361,6 +366,7 @@ export function ReportPanel() {
   // die stuurt de app-chrome aan, deze alleen het papier. Werkt relatief (tekst/tabel groeien, de
   // tijdlijn-zoom niet) — zie de afleiding bij `ReportMetrics` in printPreview.ts.
   const [reportFontScale, setReportFontScale] = useState(DEFAULT_REPORT_SETTINGS.reportFontScale);
+  const [rowHeightPx, setRowHeightPx] = useState<number | null>(DEFAULT_REPORT_SETTINGS.rowHeightPx);
   // Statuslijn in de export: letterlijk drie opties (geen / statusdatumlijn / voortgangslijn).
   const [statusLine, setStatusLine] = useState(DEFAULT_REPORT_SETTINGS.statusLine);
   // Volg weergave: export tekent exact de viewRows van het scherm (WYSIWYG).
@@ -368,6 +374,8 @@ export function ReportPanel() {
   // Alleen de rasterkwaliteit. Deze waarde gaat bewust NIET in PrintOptions: PDF en paginering
   // mogen nooit veranderen door hoe scherp iemand de preview op zijn scherm leest.
   const [previewQuality, setPreviewQuality] = useState(DEFAULT_REPORT_SETTINGS.previewQuality);
+  // Afdrukperiode van de Gantt-afdruk (zie `ReportSettings.ganttPeriod`).
+  const [ganttPeriod, setGanttPeriod] = useState<ReportingPeriod>(DEFAULT_REPORT_SETTINGS.ganttPeriod);
 
   // Instellingenkolom horizontaal sleepbaar. Zelfde generieke
   // sleeppatroon als de rechterpaneel-splitter in App.tsx en de tabel/chart-splitter in
@@ -443,9 +451,11 @@ export function ReportPanel() {
       setRepeatFooter(s.repeatFooter);
       setTimelineColumns(s.timelineColumns);
       setReportFontScale(s.reportFontScale);
+      setRowHeightPx(s.rowHeightPx);
       setStatusLine(s.statusLine);
       setFollowView(s.followView);
       setPreviewQuality(s.previewQuality);
+      setGanttPeriod(s.ganttPeriod);
       setTableOptions(s.tableReports);
       setResourceGanttOptions(s.resourceGantt);
       hydratedRef.current = true;
@@ -481,14 +491,15 @@ export function ReportPanel() {
     void saveReportSettings({
       reportType, showCritical, showFloat, showDeps, showWeekends, compressNonWorkdays: reportCompressNonWorkdays, showLegend,
       showTaskNames, showCompletion, truncateTaskNames, taskNameColumnWidth, showBaselineOverlay, autoFit, customZoom,
-      paperSize, orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, statusLine, followView, previewQuality,
+      paperSize, orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, rowHeightPx, statusLine, followView, previewQuality,
+      ganttPeriod,
       tableReports: tableOptions,
       resourceGantt: resourceGanttOptions,
     }).catch(() => {});
   }, [reportType, showCritical, showFloat, showDeps, showWeekends, reportCompressNonWorkdays, showLegend, showTaskNames,
       showCompletion, truncateTaskNames, taskNameColumnWidth, showBaselineOverlay, autoFit, customZoom, paperSize,
-      orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, statusLine, followView, previewQuality,
-      tableOptions, resourceGanttOptions]);
+      orientation, repeatHeader, repeatFooter, timelineColumns, reportFontScale, rowHeightPx, statusLine, followView, previewQuality,
+      ganttPeriod, tableOptions, resourceGanttOptions]);
 
   // Resourcediagram: dezelfde Gantt-render, maar de rijen komen uit de pure rekenmodule
   // (per resource-identiteit een band, daaronder zijn taken) en niet van het scherm.
@@ -517,6 +528,10 @@ export function ReportPanel() {
   const resourceGanttWindow = reportType === 'resourceGantt' && resourceGanttOptions.period.preset !== 'project'
     ? resourceGanttPeriod
     : undefined;
+  // Gantt-afdruk: hetzelfde tijdvenster, maar de rijen blijven allemaal staan (een taak buiten de
+  // periode houdt haar rij zonder balk) en de relatiepijlen worden op de rand afgekapt.
+  const ganttResolvedPeriod = useResolvedPeriod(ganttPeriod);
+  const ganttWindow = reportType === 'gantt' && ganttPeriod.preset !== 'project' ? ganttResolvedPeriod : undefined;
   const resourceGantt = useMemo(() => (reportType === 'resourceGantt'
     ? computeResourceGanttRows({ tasks, resources, assignments }, {
       includeUnassigned: resourceGanttOptions.includeUnassigned, noneLabel, locale: i18n.language,
@@ -727,6 +742,7 @@ export function ReportPanel() {
     compressNonWorkdays: reportCompressNonWorkdays,
     timelineColumns,
     reportFontScale,
+    rowHeightPx,
     // Welke relaties BEPALEND (driving) zijn is een `CPMResult`-veld dat bewust niet
     // gepersisteerd wordt; de printlaag kan het dus niet zelf afleiden en krijgt het hier door.
     // Bij een cyclus (`cpmResult.error`) of vóór de eerste berekening blijft het `undefined`, en
@@ -749,8 +765,9 @@ export function ReportPanel() {
     rows: reportRows,
     // "Een blad per persoon": gedwongen paginaovergang vóór elke resourceband.
     pageBreakBeforeGroups: reportType === 'resourceGantt' && resourceGanttOptions.pageBreakPerResource,
-    // De tijdas op de rapportageperiode (alleen resourcediagram, alleen buiten *Hele project*).
-    timeWindow: resourceGanttWindow,
+    // De tijdas op de rapportageperiode (resourcediagram) of de afdrukperiode (Gantt-afdruk); bij
+    // *Hele project* geen venster.
+    timeWindow: resourceGanttWindow ?? ganttWindow,
     // Eenheden/dag en curve van de band op de taak als tabelkolommen (alleen resourcediagram).
     assignmentColumns,
     rowAssignments: resourceGantt?.assignmentByRowKey,
@@ -768,11 +785,11 @@ export function ReportPanel() {
     },
   }), [showCritical, showFloat, showDeps, showWeekends, showLegend, showTaskNames, showCompletion, showBaselineOverlay,
     autoFit, customZoom, paperSize, orientation, companyName, effectiveNameColumnWidth, t, locale, project.startDate,
-    project.endDate, project.author, dateNotation, timeNotation, weekStartDay, reportCompressNonWorkdays, timelineColumns, reportFontScale,
+    project.endDate, project.author, dateNotation, timeNotation, weekStartDay, reportCompressNonWorkdays, timelineColumns, reportFontScale, rowHeightPx,
     cpmResult, barColorSelection, fieldCtx.activityCodeTypes, fieldCtx.customFieldDefs,
     reportTaskTypeLabels, tTask, daySuffix, statusLine, statusDate, resources,
     assignments, baselineOverlay, baselineComparisons, baselineNames, reportRows, reportType, resourceGanttOptions.pageBreakPerResource, tasks.length,
-    resourceGantt, resourceGanttWindow, assignmentColumns, curveLabels, curveColumnWidth, columnWidths, tableHeaders, i18n.language,
+    resourceGantt, resourceGanttWindow, ganttWindow, assignmentColumns, curveLabels, curveColumnWidth, columnWidths, tableHeaders, i18n.language,
     durationDisplay, durationSuffixes, calendars, workdayDurationMeasure]);
   // `options` bevat afgeleide catalogus-/vertaalobjecten die bij een lokale preview-state-update
   // opnieuw kunnen worden aangemaakt zonder dat hun inhoud wijzigde. De rastertaak gebruikt deze
@@ -834,12 +851,7 @@ export function ReportPanel() {
         assignmentColumnsDropped: columnsDropped,
       } = measurePrintReport(tasks, sequences, calendar, projectName, options);
       setAssignmentColumnsDropped(!!columnsDropped);
-      const lowerPaper = options.paperSize.toLowerCase() as 'a4' | 'a3' | 'a2' | 'a1';
-      const cssPageWidth = previewCssWidth;
-      const previewLimits = computePreviewRasterLimits(
-        logicalWidth, logicalHeight, lowerPaper, options.orientation, cssPageWidth, window.devicePixelRatio,
-        PREVIEW_QUALITY_FACTORS[previewQuality],
-      );
+      const lowerPaper = toPaperSize(options.paperSize);
       const tileOptions = {
         paperSize: lowerPaper,
         orientation: options.orientation,
@@ -856,9 +868,15 @@ export function ReportPanel() {
         // het resourcediagram ook zijn gedwongen overgangen per resource.
         breakOffsetsPx: breakOffsets,
         forcedBreakOffsetsPx: forcedBreakOffsets,
-        supersample: previewLimits.pageSupersample,
       };
       const layout = computeTileLayout(tileOptions);
+      const cssPageWidth = previewCssWidth;
+      const previewLimits = computePreviewRasterLimits(
+        logicalWidth, logicalHeight, lowerPaper, options.orientation, cssPageWidth, window.devicePixelRatio,
+        PREVIEW_QUALITY_FACTORS[previewQuality],
+        // De echte paginamaat uit de layout: bij een rol volgt de lengte uit de inhoud.
+        { width: layout.pageWidthPt, height: layout.pageHeightPt },
+      );
       // De herhaalde voet wordt binnen één paginabreedte gelegd (meerdere kolommen ⇒ compleet op elk
       // vel); zonder herhaling ligt de voet over de volle canvasbreedte.
       const pageOptions: PrintOptions = { ...options, footerLayoutWidth: footerLayoutWidthFor(layout) };
@@ -1087,7 +1105,7 @@ export function ReportPanel() {
     }
     setExportError(null);
 
-    const lowerPaper = paperSize.toLowerCase() as 'a4' | 'a3' | 'a2' | 'a1';
+    const lowerPaper = toPaperSize(paperSize);
     // Basisrichting van de export-taal: stuurt de bidi in het complexe RTL-tekst-pad van de vector-export.
     const exportBaseDir: 'ltr' | 'rtl' =
       RTL_LOCALES.includes((options.locale ?? '') as Locale) ? 'rtl' : 'ltr';
@@ -1097,7 +1115,8 @@ export function ReportPanel() {
     await ensureInterLoaded();
 
     if (isGanttLike) {
-      const mode = autoFit ? 'fit-width' : 'actual';
+      // Een rol langs de tijdlijn rekent altijd in 'actual' (zie `rollRunsAlongTimeline`).
+      const mode = autoFit && !rollRunsAlongTimeline(lowerPaper, orientation) ? 'fit-width' : 'actual';
 
       // De raster-tak (JPEG-tegels) als betrouwbare terugval: de vector-tak valt erop terug bij een
       // fout (bv. een glyph buiten Inter). Render offscreen op een vaste hoge schaal, onafhankelijk van het
@@ -1460,16 +1479,42 @@ export function ReportPanel() {
             <ReportFieldRow label={t('orientation')}>
               <OrientationSelect className="flex-1 min-w-0" value={orientation} onChange={setOrientation} />
             </ReportFieldRow>
+            <RollPaperHint paperSize={paperSize} orientation={orientation} />
 
             {/* Lettergrootte van het rapport. Relatief bedoeld: bij een grotere
                 letter groeien tekst, rijen en tabel op het vel en levert de tijdlijn breedte in. */}
+            {/* Lettergrootte in px van de taaknaam (9 px = 100 %); intern een percentage. */}
             <ReportFieldRow label={t('reportFontScaleLabel')}>
-              <Select
-                className="flex-1 min-w-0"
-                aria-label={t('reportFontScaleLabel')}
-                value={String(reportFontScale)}
-                onChange={v => setReportFontScale(Number(v))}
-                options={REPORT_FONT_SCALES.map(n => ({ value: String(n), label: `${n}%` }))}
+              <PxSizeField
+                id="report-text-px"
+                dataKey="reportTextPx"
+                className="flex-1"
+                ariaLabel={t('reportFontScaleLabel')}
+                value={REPORT_TEXT_BASE_PX * reportFontScale / 100}
+                defaultValue={REPORT_TEXT_BASE_PX}
+                min={REPORT_TEXT_PX_MIN}
+                max={REPORT_TEXT_PX_MAX}
+                step={REPORT_TEXT_PX_STEP}
+                onChange={px => setReportFontScale(px / REPORT_TEXT_BASE_PX * 100)}
+                onReset={() => setReportFontScale(100)}
+              />
+            </ReportFieldRow>
+            {/* Rijhoogte van de afdruk in px, los van die op het scherm; standaard volgt hij de
+                lettergrootte. Balken blijven even dik. */}
+            <ReportFieldRow label={t('rowHeightScaleLabel')}>
+              <PxSizeField
+                id="report-row-height-px"
+                dataKey="reportRowHeightPx"
+                className="flex-1"
+                ariaLabel={t('rowHeightScaleLabel')}
+                value={rowHeightPx ?? reportAutoRowHeightPx(reportFontScale)}
+                defaultValue={reportAutoRowHeightPx(reportFontScale)}
+                isDefault={rowHeightPx === null}
+                min={REPORT_ROW_PX_MIN}
+                max={REPORT_ROW_PX_MAX}
+                step={1}
+                onChange={px => setRowHeightPx(px)}
+                onReset={() => setRowHeightPx(null)}
               />
             </ReportFieldRow>
 
@@ -1546,7 +1591,17 @@ export function ReportPanel() {
                 sortering, inklapstatus). Uit (default) = de volledige takenboom. Niet bij
                 het resourcediagram: daar komen de rijen per definitie niet van het scherm. */}
             {reportType === 'gantt' && (
-              <ReportCheckRow spaced checked={followView} onChange={setFollowView} label={t('followView')} />
+              <>
+                <ReportCheckRow spaced checked={followView} onChange={setFollowView} label={t('followView')} />
+                {/* Afdrukperiode: alleen dit stuk van de tijdlijn; alle rijen blijven staan. */}
+                <ReportingPeriodField
+                  id="report-opt-ganttPeriod"
+                  label={t('ganttPeriod')}
+                  value={ganttPeriod}
+                  onChange={setGanttPeriod}
+                  dataKey="ganttPeriod"
+                />
+              </>
             )}
 
             {/* Resourcediagram: een blad per resource, en de taken zonder resource erbij. */}
@@ -1572,16 +1627,19 @@ export function ReportPanel() {
               </>
             )}
 
-            {/* Auto-fit checkbox */}
-            <ReportCheckRow
-              spaced
-              checked={autoFit}
-              onChange={setAutoFit}
-              label={t('autoFit', { defaultValue: 'Auto-fit op papier' })}
-            />
+            {/* Auto-fit checkbox. Een rol langs de tijdlijn heeft geen vaste breedte om op te
+                passen: dan geen Auto-fit maar altijd de zoom (zie `rollRunsAlongTimeline`). */}
+            {!rollAlongTimeline && (
+              <ReportCheckRow
+                spaced
+                checked={autoFit}
+                onChange={setAutoFit}
+                label={t('autoFit', { defaultValue: 'Auto-fit op papier' })}
+              />
+            )}
 
             {/* Custom zoom slider (only when auto-fit is off) */}
-            {!autoFit && (
+            {!effectiveAutoFit && (
               <ReportFieldRow label={t('zoom', { defaultValue: 'Zoom:' })}>
                 <input
                   type="range"
@@ -1604,14 +1662,14 @@ export function ReportPanel() {
                 aria-label={t('timelineColumnsLabel')}
                 value={String(timelineColumns)}
                 onChange={v => setTimelineColumns(Number(v))}
-                disabled={!autoFit}
+                disabled={!effectiveAutoFit}
                 options={[1, 2, 3, 4, 5, 6, 7, 8].map(n => ({
                   value: String(n),
                   label: t('timelineColumns', { count: n }),
                 }))}
               />
             </ReportFieldRow>
-            {!autoFit && (
+            {!effectiveAutoFit && (
               <span className="text-text-secondary">{t('timelineColumnsHint')}</span>
             )}
 

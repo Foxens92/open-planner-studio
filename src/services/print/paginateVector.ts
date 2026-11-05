@@ -17,7 +17,7 @@
  * `hbSubset.ts`), zodat deze module ook headless bundelbaar is.
  */
 import {
-  PDFDocument, PDFName, PDFRef, type PDFFont, type PDFOperator,
+  PDFDocument, PDFName, PDFRef, PrintScaling, type PDFFont, type PDFOperator,
   pushGraphicsState, popGraphicsState,
   concatTransformationMatrix, drawObject, rectangle, clip, endPath,
   setFillingRgbColor, beginText, endText, setFontAndSize, setTextMatrix, showText,
@@ -28,7 +28,7 @@ import { getCjkFontProviders, type CjkFontProvider } from '@/services/pdf/fontRe
 import { appLog } from '@/services/debug/appLog';
 import type { Draw2D } from '@/services/pdf/draw2d';
 import type { RenderReportResult } from '@/services/print/printPreview';
-import { computeTileLayout, footerLayoutWidthFor, type PaperSize, type Orientation, type PaginateMode } from './tileLayout';
+import { computeTileLayout, footerLayoutWidthFor, printsAtActualSize, type PaperSize, type Orientation, type PaginateMode } from './tileLayout';
 
 /** Optie-subset voor de vector-pagineerder; de logische dims + bevroren-kolombreedte komen uit de render. */
 export interface VectorPaginateOptions {
@@ -145,6 +145,9 @@ export async function paginateVectorToPdfBytes(
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
+  if (printsAtActualSize(opts.paperSize)) {
+    doc.catalog.getOrCreateViewerPreferences().setPrintScaling(PrintScaling.None);
+  }
   // BEWUST `subset: false` (volledige glyf-embed). pdf-lib 1.17.1's subsetter (via @pdf-lib/fontkit)
   // levert een subset waarvan de glyphs in pdfium/Chrome NIET renderen (tekst wordt deels onzichtbaar),
   // hoewel de ToUnicode-extractie klopt — empirisch aangetoond (pdfium + Chromium-screenshots). Volledig

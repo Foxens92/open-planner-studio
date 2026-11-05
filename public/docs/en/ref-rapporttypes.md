@@ -20,9 +20,9 @@ Open the *Report* tab (or press Ctrl+P). On the left is the *Report* column with
 
 ## Paper and orientation
 
-**Paper:** — the paper size of the PDF. Choose from A4, A3, A2 and A1. Default: A3. Effect: the pages are laid out for that size. There is one choice for all reports: what you choose for one report also holds for the others. On portrait A4 a wide table gets small, because the table is scaled to the page width. Where: *Settings* (Gantt chart and Resource diagram) or *Report options* (the seven table reports). The Milestone overview and the Variance show no choices.
+**Paper:** — the paper size of the PDF. Choose from A4, A3, A2, A1, A0 and *Roll 914 mm*. Default: A3. Effect: the pages are laid out for that size. *Roll 914 mm* is for a plotter with a 914 mm roll: the PDF gets one continuous band as wide as the roll and as long as the content, up to 5.08 m per page; anything longer continues on a next page. For A0 and the roll the PDF asks the print program to print at actual size; still turn off *Fit to page* in the print dialog if your program ignores that. There is one choice for all reports: what you choose for one report also holds for the others. On portrait A4 a wide table gets small, because the table is scaled to the page width. Where: *Settings* (Gantt chart and Resource diagram) or *Report options* (the seven table reports). The Milestone overview and the Variance show no choices.
 
-**Orientation:** — landscape or portrait. Choose from *Landscape* and *Portrait*. Default: *Landscape*. Effect: like *Paper:*. Where: the same place as *Paper:*.
+**Orientation:** — landscape or portrait. Choose from *Landscape* and *Portrait*. Default: *Landscape*. Effect: like *Paper:*. With *Roll 914 mm* this sets the direction of the band. *Portrait*: the timeline spans the roll width and the band is as long as the task list. *Landscape*: the task list spans the roll width and the band runs along the timeline; *Auto-fit to paper* then disappears and the length follows *Zoom:*. Where: the same place as *Paper:*.
 
 ## Gantt chart
 
@@ -32,13 +32,17 @@ The schedule as a bar chart, with a table on the left and a timeline on the righ
 
 **Author:** — the author in the page header. Read-only: the app takes it from the project settings.
 
-**Font size:** — size of text and table in the report. Choose from 90%, 100%, 110% and 125%. Default: 100%. Effect: with a larger font, text, rows and table grow and the timeline loses width. Independent of *Text size* in the settings.
+**Font size:** — size of text and table in the report, measured on the task name, in px. From 6 to 18 px, in steps of 0.5. Default: 9 px (100%). Effect: with a larger font, text, rows and table grow and the timeline loses width. With Auto-fit the whole printout can still come out larger or smaller on paper. The button *Default (100%, 9 px)* sets the value back. Independent of *Text size* in the settings.
+
+**Row height:** — height of the rows in the Gantt chart and the Resource diagram printout, in px. From 12 to 96 px. Default: automatic, 24 px at a font size of 9 px. Effect: a taller row gives more space around the bars, which keep their thickness; the printout gets longer. A lower row makes the bars thinner. The button *Default (100%, … px)* sets the row back to automatic. Independent of *Row height* in the settings.
 
 **Bar colors:** — what the colour of a bar depends on. Choose from *Critical path*, *Per task — automatic* and *By category*, with a drop-down *Category field* for *By category*. Default: *Critical path*. Effect: this is the same choice as *Bar colors* on the *View* tab: if you change it here, the Gantt on screen changes with it. If the chosen field does not exist in this project, it says *This field does not exist in this project. Work category is used temporarily.*
 
 **Status line:** — a line at the status date. Choose from *None*, *Status date line* and *Progress line*. Default: *None*. Effect: *Status date line* draws a line at the status date; *Progress line* draws the zigzag line that bulges to the progress of each task. If the project has no status date, it says *Set a status date first* and the report draws nothing.
 
 **Follow view (filter, grouping, sort)** — only for the Gantt chart. Default: off. Effect: off puts the whole task tree on paper. On draws exactly the rows of the screen: with your filter, grouping, sorting and collapsed phases.
+
+**Print period:** — only for the Gantt chart: the part of the timeline that goes on paper. Default: *Project duration*. Effect: the time axis runs exactly from *From* through *To*. All tasks keep their row in the table; a bar that runs past the edge is cut off there, and a task outside the period has no bar. Relation arrows are cut off at the edge. The same choices as the *Reporting period*, see below.
 
 **Auto-fit to paper** — scale the timeline to the page width. Default: on. Effect: on scales the timeline to the width of the page; the number of pages follows from the height. Off uses a fixed scale (*Zoom:*) and also tiles across the width, which quickly gives many pages.
 
@@ -213,7 +217,7 @@ The columns include *WBS*, *Name*, *Start*, *Finish*, *Baseline start*, *Baselin
 
 ## Reporting period
 
-Four table reports and the Resource diagram work with a *Reporting period:*: *Look-ahead*, *Progress report*, *Resource loading*, *Resource assignments* and the *Resource diagram*. Each report remembers its own period. Below the drop-down are *From* and *To*, with the dates the choice produces.
+Four table reports and the Resource diagram work with a *Reporting period:*: *Look-ahead*, *Progress report*, *Resource loading*, *Resource assignments* and the *Resource diagram*. The Gantt chart has the same choice under the name *Print period:*. Each report remembers its own period. Below the drop-down are *From* and *To*, with the dates the choice produces.
 
 **Reference day.** A period with *Next* or *Last* counts from the status date of the project, or from today if there is no status date. Then the table reports say *No status date set — the report uses today (…).* If you move the status date, the window moves along. Both days count.
 

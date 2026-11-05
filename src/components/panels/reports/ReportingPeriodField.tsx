@@ -36,6 +36,8 @@ interface Props {
   onChange: (next: ReportingPeriod) => void;
   /** `data-ops-report-option`-sleutel voor tests. */
   dataKey: string;
+  /** Eigen kop boven de keuzelijst; standaard *Rapportageperiode*. */
+  label?: string;
 }
 
 /** De referentiedag en projectspanne uit de live store — dezelfde bron als `useReportContext`.
@@ -51,7 +53,7 @@ export function useResolvedPeriod(period: ReportingPeriod): ResolvedPeriod {
   }, [period, tasks, statusDate, today]);
 }
 
-export function ReportingPeriodField({ id, value, onChange, dataKey }: Props) {
+export function ReportingPeriodField({ id, value, onChange, dataKey, label: heading }: Props) {
   const { t } = useTranslation('report');
   const dd = useDisplayDate();
   const resolved = useResolvedPeriod(value);
@@ -120,11 +122,11 @@ export function ReportingPeriodField({ id, value, onChange, dataKey }: Props) {
       {/* Label bóven de keuzelijst: naast een `w-32`-label blijven bij de standaardkolom 53 px over
           en leest élke preset als "Hele pr…". */}
       <div className="flex flex-col gap-1 min-w-0">
-        <label className="text-text-secondary" htmlFor={id}>{t('tableReports.options.reportingPeriod')}</label>
+        <label className="text-text-secondary" htmlFor={id}>{heading ?? t('tableReports.options.reportingPeriod')}</label>
         <Select
           id={id}
           className="w-full min-w-0"
-          aria-label={t('tableReports.options.reportingPeriod')}
+          aria-label={heading ?? t('tableReports.options.reportingPeriod')}
           value={value.preset}
           onChange={v => changePreset(v as ReportingPeriodPreset)}
           options={REPORTING_PERIOD_PRESETS.map(p => ({ value: p, label: t(`tableReports.periodPresets.${p}`) }))}

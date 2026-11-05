@@ -480,7 +480,9 @@
     "timeNotation12h": "12 heures (1:00 PM)",
     "fontFamilyLabel": "Police",
     "fontScaleLabel": "Taille du texte",
-    "fontScaleHint": "Redimensionne le texte et la mise en page de l'interface.",
+    "fontScaleHint": "Taille du texte courant de l'interface en px, de 9 à 14. Par défaut 11 px (100 %).",
+    "rowHeightLabel": "Hauteur de ligne",
+    "rowHeightHint": "Hauteur des lignes du tableau et du Gantt en px, de 22 à 96. Par défaut elle suit la taille du texte (32 px à 100 %). Les barres gardent leur épaisseur ; une ligne plus haute donne plus d'espace autour.",
     "fontFamilyDefault": "Par défaut",
     "fontFamilySystem": "Système",
     "fontFamilySerif": "Serif",
@@ -1791,5 +1793,9 @@
     "actualWorkLost_one": "L'affectation de {{resource}} comporte déjà {{hours}} heure de travail réel. La supprimer fait perdre ce travail.",
     "actualWorkLost_many": "L'affectation de {{resource}} comporte déjà {{hours}} heures de travail réel. La supprimer fait perdre ce travail.",
     "actualWorkLost_other": "L'affectation de {{resource}} comporte déjà {{hours}} heures de travail réel. La supprimer fait perdre ce travail."
+  },
+  "pxField": {
+    "reset": "Par défaut (100 %, {{px}} px)",
+    "resetTitle": "Revenir à la valeur par défaut : {{px}} px"
   }
 }

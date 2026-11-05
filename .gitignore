@@ -64,3 +64,4 @@ output/
 
 # Platformbouw (`npm run build:platform`, issue #307)
 dist-platform/
+/build/mac-update/

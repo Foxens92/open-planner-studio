@@ -44,7 +44,9 @@ const DATA = Buffer.from('Open Planner Studio installer bytes\n'.repeat(100));
 test('parsePublicKey leest de echte pubkey uit tauri.conf.json', async () => {
   const { readFileSync } = await import('node:fs');
   const conf = JSON.parse(readFileSync(new URL('../../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
-  assert.equal(keyIdHex(parsePublicKey(conf.plugins.updater.pubkey).keyId), '28AC8F08A87C90CD');
+  // Deze fork vervangt de sleutel door een eigen sleutel (scripts/mac-update-key.sh): toets dus dat
+  // hij geldig is, niet welke het is.
+  assert.match(keyIdHex(parsePublicKey(conf.plugins.updater.pubkey).keyId), /^[0-9A-F]{16}$/);
 });
 
 test('verifyMinisign keurt een geldige ED-handtekening (BLAKE2b-prehash) goed', () => {

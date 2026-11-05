@@ -53,6 +53,14 @@ const saved = await loadReportSettings();
 expect('rapporttype overleeft een round-trip', saved.reportType, 'resourceGantt');
 expect('opties overleven een round-trip', saved.resourceGantt, { pageBreakPerResource: true, includeUnassigned: false, groupByType: true, period: { preset: 'custom', from: '2026-09-01', to: '2026-09-30' }, showAssignmentColumns: false });
 
+// Afdrukperiode van de Gantt-afdruk: default Hele project (geen venster, het oude gedrag), een
+// round-trip door de echte opslag, en dezelfde tolerante periodeparser.
+expect('afdrukperiode Gantt: default Hele project', DEFAULT_REPORT_SETTINGS.ganttPeriod, { preset: 'project' });
+await saveReportSettings({ ...DEFAULT_REPORT_SETTINGS, ganttPeriod: { preset: 'custom', from: '2026-03-02', to: '2026-04-30' } });
+expect('afdrukperiode Gantt overleeft een round-trip', (await loadReportSettings()).ganttPeriod, { preset: 'custom', from: '2026-03-02', to: '2026-04-30' });
+localStorage.setItem('ops-reportSettings', JSON.stringify({ ganttPeriod: { preset: 'custom', from: '2026-04-30', to: '2026-03-02' } }));
+expect('afdrukperiode Gantt: omgekeerd bereik ⇒ Hele project', (await loadReportSettings()).ganttPeriod, { preset: 'project' });
+
 if (failures.length > 0) {
   console.log(`XX report-resource-gantt-setting: ${failures.length} afwijking(en)`);
   for (const failure of failures) console.log(`   - ${failure}`);
