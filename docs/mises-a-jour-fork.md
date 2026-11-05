@@ -69,8 +69,12 @@ projet ; il s'en souvient ensuite (`~/.open-planner-studio-dossier`).
 
 ## Une version par modification
 
-Chaque modification est enregistrée comme une nouvelle version (`2026.45.1`, `2026.45.2`…) avec une
-étiquette `fox-v<version>` sur GitHub (`scripts/nouvelle-version.sh`). Pour revenir en arrière :
+Chaque modification est enregistrée comme une nouvelle version (`2026.45.1`, `2026.45.2`…) : un
+commit « Versie <version> : description » et une étiquette `fox-v<version>`
+(`scripts/nouvelle-version.sh`). Les modifications faites par Claude dans le cloud ne peuvent pas
+envoyer d'étiquette sur GitHub : le lanceur du bureau les crée sur ton Mac à partir des commits
+« Versie … » et les envoie (`scripts/etiquettes-versions.sh`). Lance donc le lanceur une fois avant
+de chercher une version. Pour revenir en arrière :
 
 ```bash
 git fetch --tags

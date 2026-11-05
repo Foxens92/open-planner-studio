@@ -2605,7 +2605,7 @@ dependencies = [
 
 [[package]]
 name = "open-planner-studio"
-version = "2026.45.0"
+version = "2026.45.1"
 dependencies = [
  "serde",
  "serde_json",

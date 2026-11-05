@@ -68,6 +68,9 @@ else
   echo "Récupération des dernières modifications de $BRANCHE..."
   git pull --ff-only --quiet || echo "Mise à jour impossible (réseau ?) : lancement de la version locale."
 fi
+# Étiquettes fox-v<version> manquantes (créées à partir des commits "Versie ..."), pour pouvoir
+# revenir à n'importe quelle version.
+[ -f scripts/etiquettes-versions.sh ] && bash scripts/etiquettes-versions.sh
 echo "Version : $(node -p "require('./package.json').version") ($(git describe --tags --always))"
 
 if [ ! -d node_modules ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then

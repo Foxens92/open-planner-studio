@@ -380,6 +380,8 @@ bridge tests against the real Rust bridge). Docs: `docs/release-verificatie.md`,
 - **This fork: one version per change** (owner, 2026-11-05). Finish every change the owner asks for with
   `bash scripts/nouvelle-version.sh "<short description>"`: it runs `npm run bump`, commits, tags `fox-v<version>`
   and pushes branch and tag, so every step can be checked out again. Never a `v*` tag (that starts `release.yml`).
+  A cloud session cannot push tags (403): the version commit is enough, the owner's launcher creates the missing
+  `fox-v` tags from the `Versie <version>:` commit subjects (`scripts/etiquettes-versions.sh`).
   The owner tests in the browser with `scripts/mac/Open Planner Studio.command` (copied to the Mac desktop).
 - The user term is "resourcebibliotheek"; code/IFC still say `companyId`/`companyName`.
 - Screen evidence in a PR: `artifacts/<topic>/`, PNG ≤ ~150 KB, a handful; local QA screenshots in `qa/`.

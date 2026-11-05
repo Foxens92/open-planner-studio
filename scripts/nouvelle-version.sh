@@ -32,5 +32,10 @@ else
 fi
 git tag -a "$TAG" -m "$DESC"
 git push -q -u origin "$BRANCH"
-git push -q origin "$TAG"
-echo "Version $VERSION enregistrée ($TAG) : $DESC"
+# Een agentsessie in de cloud mag geen tags pushen: de versiecommit staat dan op GitHub en de Mac
+# van de eigenaar zet de tag later (scripts/etiquettes-versions.sh, via de lanceerder).
+if git push -q origin "$TAG" 2>/dev/null; then
+  echo "Version $VERSION enregistrée ($TAG) : $DESC"
+else
+  echo "Version $VERSION enregistrée : $DESC (étiquette $TAG locale ; elle sera créée sur GitHub par le lanceur du Mac)"
+fi
