@@ -51,7 +51,13 @@ env:
 jobs:
   resolve:
     # workflow_run vuurt ook als release.yml faalde; dan valt er niets te controleren.
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # Uitgeschakeld in de fork Foxens92 (eigenaar, 2026-11-10): die publiceert alleen macOS-releases
+    # `mac-v<versie>` (scripts/publish-mac-update.sh), en deze controle verwacht alle platformen en de
+    # handtekeningen van OpenAEC. Alleen in de bronrepository draait hij; elders slaat `resolve` over
+    # en daarmee alle jobs die erop wachten.
+    if: >-
+      github.repository == 'OpenAEC-Foundation/open-planner-studio'
+      && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:

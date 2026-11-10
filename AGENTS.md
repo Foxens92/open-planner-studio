@@ -376,7 +376,8 @@ bridge tests against the real Rust bridge). Docs: `docs/release-verificatie.md`,
   and `GITHUB_REPO` (`src/services/githubRepo.ts`) point to `Foxens92/open-planner-studio`; macOS updates are
   signed with the owner's key and published by hand as `mac-v<version>` releases
   (`scripts/mac-update-key.sh`, `scripts/publish-mac-update.sh`, `docs/mises-a-jour-fork.md`). Never point them
-  back to OpenAEC, and never put a private signing key in the repo.
+  back to OpenAEC, and never put a private signing key in the repo. `release-verify.yml` only runs in
+  `OpenAEC-Foundation/open-planner-studio` (its `resolve` job checks `github.repository`); in this fork it is skipped.
 - **This fork: one version per change** (owner, 2026-11-05). Finish every change the owner asks for with
   `bash scripts/nouvelle-version.sh "<short description>"`: it runs `npm run bump`, commits, tags `fox-v<version>`
   and pushes branch and tag, so every step can be checked out again. Never a `v*` tag (that starts `release.yml`).

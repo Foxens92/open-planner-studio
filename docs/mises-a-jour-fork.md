@@ -46,9 +46,9 @@ au démarrage.
 - L'application n'est pas signée par Apple (pas de compte développeur) : la première installation
   demande un clic droit puis « Ouvrir ». Les mises à jour suivantes passent par l'application.
 - La chaîne officielle (`.github/workflows/release.yml`) n'est pas utilisée : elle démarre sur les
-  étiquettes `v*`, d'où le préfixe `mac-v`. Le workflow `release-verify.yml` se déclenche à chaque
-  publication et échouera, car il attend toutes les plateformes ; tu peux le désactiver dans l'onglet
-  Actions du dépôt.
+  étiquettes `v*`, d'où le préfixe `mac-v`. Le workflow `release-verify.yml`, qui attend toutes les
+  plateformes, est désactivé dans ce dépôt : il ne tourne que sur le dépôt d'OpenAEC et apparaît ici
+  comme « ignoré ».
 - Les versions publiées par OpenAEC ne sont plus proposées. Pour intégrer leurs nouveautés, il faut
   les fusionner dans ce dépôt puis publier ta propre version.
 
