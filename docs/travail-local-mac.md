@@ -25,15 +25,17 @@ le dossier) fonctionne aussi.
 ## 2. Récupérer le code (dernière utilisation de GitHub)
 
 ```bash
-cd ~
-git clone --branch claude/loving-brahmagupta-h0v95j https://github.com/Foxens92/open-planner-studio.git
-cd open-planner-studio
+mkdir -p ~/Documents/Développement
+cd ~/Documents/Développement
+git clone --branch claude/loving-brahmagupta-h0v95j https://github.com/Foxens92/open-planner-studio.git "EX Planner"
+cd "EX Planner"
 git branch -m main                 # la branche de travail s'appelle désormais main
 git remote remove origin           # coupe le lien avec GitHub
 bash scripts/etiquettes-versions.sh   # recrée les étiquettes des versions déjà faites
 ```
 
-Le projet est maintenant dans `~/open-planner-studio`, avec tout son historique.
+Le projet est maintenant dans **Documents › Développement › EX Planner**
+(`~/Documents/Développement/EX Planner`), avec tout son historique.
 
 ## 3. Mettre les deux raccourcis sur le bureau
 
@@ -49,8 +51,8 @@ cp "scripts/mac/Tester dans le navigateur.command" ~/Desktop/
 - **Tester dans le navigateur** : lance le dossier tel qu'il est dans le navigateur, sans compiler.
   Utile pour un essai rapide ; garde la fenêtre du Terminal ouverte pendant le test.
 
-La première fois, un raccourci peut demander où se trouve le dossier du projet ; il s'en souvient
-ensuite.
+Les raccourcis cherchent le projet dans Documents › Développement › EX Planner. S'il est ailleurs, ils
+demandent le dossier la première fois et s'en souviennent ensuite.
 
 ## 4. Première installation
 
@@ -64,7 +66,7 @@ clic droit sur l'application, puis « Ouvrir ».
 
 ## 5. Faire une modification
 
-1. Ouvre Claude, côté Code, sur le dossier `~/open-planner-studio`.
+1. Ouvre Claude, côté Code, sur le dossier **Documents › Développement › EX Planner**.
 2. Décris la modification. Claude la fait, la vérifie et l'enregistre comme nouvelle version.
 3. Double-clic sur **Mettre à jour Open Planner Studio** : l'application installée passe à la nouvelle
    version.
@@ -72,7 +74,7 @@ clic droit sur l'application, puis « Ouvrir ».
 ## 6. Revenir à une version précédente
 
 ```bash
-cd ~/open-planner-studio
+cd ~/Documents/Développement/"EX Planner"
 git tag -l "fox-v*"            # liste des versions
 git checkout fox-v2026.45.1    # se placer sur une version
 ```
@@ -83,7 +85,7 @@ demande-le à Claude : elle sera défaite dans une nouvelle version, sans efface
 
 ## 7. Sauvegarde
 
-Il n'y a plus de copie sur GitHub : le dossier `~/open-planner-studio` (historique compris, dans son
+Il n'y a plus de copie sur GitHub : le dossier **EX Planner** (historique compris, dans son
 sous-dossier caché `.git`) est la seule source. Active Time Machine, ou copie régulièrement ce dossier
 sur un disque externe.
 

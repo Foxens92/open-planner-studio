@@ -24,13 +24,14 @@ DOSSIER=""
 [ -f "$MEMO" ] && DOSSIER="$(cat "$MEMO")"
 if ! est_le_projet "$DOSSIER"; then
   DOSSIER=""
-  for c in "$HOME/open-planner-studio" "$HOME/Documents/open-planner-studio" \
-           "$HOME/Developer/open-planner-studio" "$HOME/Desktop/open-planner-studio"; do
+  # Emplacement prévu : Documents/Développement/EX Planner (docs/travail-local-mac.md).
+  for c in "$HOME/Documents/Développement/EX Planner" "$HOME/Documents/Developpement/EX Planner" \
+           "$HOME/open-planner-studio" "$HOME/Documents/open-planner-studio"; do
     if est_le_projet "$c"; then DOSSIER="$c"; break; fi
   done
 fi
 if [ -z "$DOSSIER" ]; then
-  DOSSIER="$(osascript -e 'POSIX path of (choose folder with prompt "Choisis le dossier open-planner-studio")' 2>/dev/null)"
+  DOSSIER="$(osascript -e 'POSIX path of (choose folder with prompt "Choisis le dossier EX Planner (le projet)")' 2>/dev/null)"
   DOSSIER="${DOSSIER%/}"
 fi
 if ! est_le_projet "$DOSSIER"; then
