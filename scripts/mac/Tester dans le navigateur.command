@@ -1,15 +1,15 @@
 #!/bin/bash
-# Lance Open Planner Studio dans le navigateur (Mac). Double-clic depuis le Bureau.
+# Teste Open Planner Studio dans le navigateur (Mac), tel qu'il est dans le dossier du projet,
+# sans compiler l'application. Double-clic depuis le Bureau.
 #
 # Installation (une fois, dans le Terminal, depuis le dossier du projet) :
-#   cp "scripts/mac/Open Planner Studio.command" ~/Desktop/
+#   cp "scripts/mac/Tester dans le navigateur.command" ~/Desktop/
 #
 # Ce que fait ce fichier :
 #   1. retrouve le dossier du projet (demandé la première fois, puis mémorisé) ;
-#   2. si l'application tourne déjà, ouvre simplement le navigateur ;
-#   3. sinon récupère les dernières modifications de ta branche (si rien n'est en cours),
-#      installe les dépendances si elles ont changé, démarre le serveur et ouvre le navigateur.
-# Laisse la fenêtre du Terminal ouverte pendant que tu travailles ; la fermer arrête l'application.
+#   2. si le test tourne déjà, ouvre simplement le navigateur ;
+#   3. sinon installe les dépendances si elles ont changé, démarre le serveur et ouvre le navigateur.
+# Laisse la fenêtre du Terminal ouverte pendant le test ; la fermer arrête le serveur.
 
 MEMO="$HOME/.open-planner-studio-dossier"
 
@@ -34,8 +34,7 @@ if [ -z "$DOSSIER" ]; then
   DOSSIER="${DOSSIER%/}"
 fi
 if ! est_le_projet "$DOSSIER"; then
-  echo "Dossier du projet introuvable. Clone-le d'abord :"
-  echo "  git clone https://github.com/Foxens92/open-planner-studio.git"
+  echo "Dossier du projet introuvable (voir docs/travail-local-mac.md)."
   pause_et_quitter 1
 fi
 echo "$DOSSIER" > "$MEMO"
@@ -53,24 +52,12 @@ repond() { curl -s -o /dev/null --max-time 2 "http://localhost:$1/"; }
 # --- 2. Déjà lancé ? --------------------------------------------------------------------------
 PORT="$(port_note)"
 if [ -n "$PORT" ] && repond "$PORT"; then
-  echo "L'application tourne déjà : ouverture de http://localhost:$PORT/"
+  echo "Le test tourne déjà : ouverture de http://localhost:$PORT/"
   open "http://localhost:$PORT/"
   exit 0
 fi
 
-# --- 3. Mise à jour du code et des dépendances ------------------------------------------------
-BRANCHE="$(git symbolic-ref --quiet --short HEAD)"
-if [ -z "$BRANCHE" ]; then
-  echo "Version figée : $(git describe --tags --always) (pas de mise à jour automatique)."
-elif [ -n "$(git status --porcelain)" ]; then
-  echo "Modifications locales en cours : pas de mise à jour automatique."
-else
-  echo "Récupération des dernières modifications de $BRANCHE..."
-  git pull --ff-only --quiet || echo "Mise à jour impossible (réseau ?) : lancement de la version locale."
-fi
-# Étiquettes fox-v<version> manquantes (créées à partir des commits "Versie ..."), pour pouvoir
-# revenir à n'importe quelle version.
-[ -f scripts/etiquettes-versions.sh ] && bash scripts/etiquettes-versions.sh
+# --- 3. Dépendances ---------------------------------------------------------------------------
 echo "Version : $(node -p "require('./package.json').version") ($(git describe --tags --always))"
 
 if [ ! -d node_modules ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
@@ -98,6 +85,6 @@ done
 
 echo
 echo "Open Planner Studio : http://localhost:$PORT/"
-echo "Laisse cette fenêtre ouverte. Ferme-la (ou Ctrl+C) pour arrêter l'application."
+echo "Laisse cette fenêtre ouverte. Ferme-la (ou Ctrl+C) pour arrêter le test."
 open "http://localhost:$PORT/"
 wait "$SERVEUR"

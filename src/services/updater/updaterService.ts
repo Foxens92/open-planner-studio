@@ -9,6 +9,7 @@
  */
 
 import { isTauri } from '@/utils/platform';
+import { ONLINE_UPDATES_ENABLED } from '@/utils/buildFlags';
 import { GITHUB_REPO } from '@/services/githubRepo';
 import { flushRecoveryNow } from '@/services/recovery/recoveryFlush';
 
@@ -78,8 +79,8 @@ export async function checkForUpdates(
   silent: boolean,
   onStatus?: (status: UpdateStatus) => void,
 ): Promise<UpdateInfo | null> {
-  // In de web-build is er geen updater — netjes no-opten.
-  if (!isTauri()) {
+  // In de web-build is er geen updater — netjes no-opten. Idem zonder updatekanaal (lokale fork).
+  if (!isTauri() || !ONLINE_UPDATES_ENABLED) {
     onStatus?.({ kind: 'upToDate' });
     return null;
   }

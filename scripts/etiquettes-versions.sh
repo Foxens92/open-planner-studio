@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # Zet voor elke versiecommit ("Versie <JJJJ.W.N>: <omschrijving>", zie scripts/nouvelle-version.sh)
-# de tag `fox-v<versie>` als die nog ontbreekt, en stuurt de fox-v-tags naar GitHub.
+# de lokale tag `fox-v<versie>` als die nog ontbreekt. Eenmalig nodig na het overzetten naar de Mac:
+# de versies die in de cloud gemaakt zijn, hadden hun tag nooit op GitHub (een cloudsessie mocht geen
+# tags pushen). Daarna zet nouvelle-version.sh de tag zelf. Pusht niets.
 #
-# Waarom apart: een agentsessie in de cloud mag alleen zijn werkbranch pushen, geen tags. De
-# versiecommits komen dus wel op GitHub, de tags maakt de Mac van de eigenaar (de lanceerder roept
-# dit script aan). Lokaal werkt terughalen ook als het pushen van de tags mislukt.
-#
-# Gebruik:  bash scripts/etiquettes-versions.sh   (stil; meldt alleen nieuwe tags)
+# Gebruik:  bash scripts/etiquettes-versions.sh
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -28,10 +26,5 @@ while IFS="$TAB" read -r hash sujet; do
   fi
 done < <(git log -n 300 --format="%H${TAB}%s")
 
-etiquettes="$(git tag -l 'fox-v*')"
-if [ -n "$etiquettes" ]; then
-  # shellcheck disable=SC2086
-  git push -q origin $(printf '%s\n' $etiquettes | sed 's|^|refs/tags/|') 2>/dev/null \
-    || { [ "$nieuw" -gt 0 ] && echo "(Étiquettes gardées sur ce Mac ; envoi vers GitHub impossible pour l'instant.)"; }
-fi
+echo "$nieuw étiquette(s) créée(s)."
 exit 0

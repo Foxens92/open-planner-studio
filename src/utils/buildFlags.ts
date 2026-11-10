@@ -26,3 +26,9 @@ export const DEMO_START_EXAMPLE: boolean = !PLATFORM_BUILD;
  *  werkt alleen in Tauri, en het token zou in localStorage staan, leesbaar voor elke tool op
  *  dezelfde origin. */
 export const AI_MODE_AVAILABLE: boolean = !PLATFORM_BUILD;
+
+/** In-app updates via een GitHub-release (`latest.json`). Uit in deze fork (eigenaar, 2026-11-10):
+ *  de app wordt lokaal op de Mac gebouwd en vervangen (`scripts/mac/installer-app.sh`), er is geen
+ *  updatekanaal. De updater-plugin blijft geregistreerd; `checkForUpdates` meldt dan alleen
+ *  "up-to-date", ook bij een handmatige controle. */
+export const ONLINE_UPDATES_ENABLED: boolean = false;

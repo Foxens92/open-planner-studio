@@ -372,18 +372,20 @@ bridge tests against the real Rust bridge). Docs: `docs/release-verificatie.md`,
   owner's separate request. The job repairs a red CI itself (owner decision 8; route in the `ci-release` rule).
   The schedule and literal job prompt live in `.claude/skills/release/scheduled-job.md`.
   Release text in `docs/release-notes/v<version>.md`; `docs/CHANGELOG.md` only at release.
-- **This fork (Foxens92) has its own update channel.** The updater endpoint in `src-tauri/tauri.conf.json`
-  and `GITHUB_REPO` (`src/services/githubRepo.ts`) point to `Foxens92/open-planner-studio`; macOS updates are
-  signed with the owner's key and published by hand as `mac-v<version>` releases
-  (`scripts/mac-update-key.sh`, `scripts/publish-mac-update.sh`, `docs/mises-a-jour-fork.md`). Never point them
-  back to OpenAEC, and never put a private signing key in the repo. `release-verify.yml` only runs in
-  `OpenAEC-Foundation/open-planner-studio` (its `resolve` job checks `github.repository`); in this fork it is skipped.
+- **This fork works locally on the owner's Mac, without GitHub** (owner, 2026-11-10). The owner talks to
+  Claude Code on the Mac in this folder (branch `main`, no remote). Never push, never add a remote, never
+  open PRs or use GitHub tools for this project. There is no update channel: `ONLINE_UPDATES_ENABLED` is
+  false (`src/utils/buildFlags.ts`), `createUpdaterArtifacts` is false, and the installed app is rebuilt and
+  replaced with `scripts/mac/installer-app.sh` (desktop: "Mettre à jour Open Planner Studio.command").
+  The GitHub workflows, the release skill and the weekly release job do not apply here. Owner guide:
+  `docs/travail-local-mac.md` (French).
 - **This fork: one version per change** (owner, 2026-11-05). Finish every change the owner asks for with
-  `bash scripts/nouvelle-version.sh "<short description>"`: it runs `npm run bump`, commits, tags `fox-v<version>`
-  and pushes branch and tag, so every step can be checked out again. Never a `v*` tag (that starts `release.yml`).
-  A cloud session cannot push tags (403): the version commit is enough, the owner's launcher creates the missing
-  `fox-v` tags from the `Versie <version>:` commit subjects (`scripts/etiquettes-versions.sh`).
-  The owner tests in the browser with `scripts/mac/Open Planner Studio.command` (copied to the Mac desktop).
+  `bash scripts/nouvelle-version.sh "<short description>"`: it picks the next `JJJJ.W.N` locally (same rule
+  as `npm run bump`, from the current version and the local `fox-v` tags), sets it with
+  `npm run bump <version>`, commits "Versie <version>: …" and tags `fox-v<version>`. Never a `v*` tag.
+  Then tell the owner to double-click "Mettre à jour Open Planner Studio" to get it into the installed app
+  (or run `bash scripts/mac/installer-app.sh` when asked). Quick browser test without a build:
+  "Tester dans le navigateur.command" (`npm run dev`). Talk to the owner in French.
 - The user term is "resourcebibliotheek"; code/IFC still say `companyId`/`companyName`.
 - Screen evidence in a PR: `artifacts/<topic>/`, PNG ≤ ~150 KB, a handful; local QA screenshots in `qa/`.
 - Changing the architecture, a command or a fact above? Update this file in the same PR.
