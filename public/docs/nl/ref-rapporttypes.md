@@ -20,9 +20,9 @@ Open het tabblad *Rapport* (of druk op Ctrl+P). Links staat de kolom *Rapportage
 
 ## Papier en oriëntatie
 
-**Papier:** — het papierformaat van de PDF. Keuze uit A4, A3, A2 en A1. Standaard: A3. Effect: de pagina's worden voor dat formaat opgelegd. Er is één keuze voor alle rapporten: wat je bij het ene rapport kiest, geldt ook voor de andere. Op A4 staand wordt een brede tabel klein, want de tabel wordt op de paginabreedte geschaald. Waar: *Instellingen* (Gantt-afdruk en Resourcediagram) of *Rapportopties* (de zeven tabelrapporten). Het Mijlpalen-overzicht en de Variance tonen geen keuzes.
+**Papier:** — het papierformaat van de PDF. Keuze uit A4, A3, A2, A1, A0 en *Rol 914 mm*. Standaard: A3. Effect: de pagina's worden voor dat formaat opgelegd. *Rol 914 mm* is voor een plotter met een rol van 914 mm: de PDF krijgt één doorlopende band zo breed als de rol en zo lang als de inhoud, tot 5,08 m per pagina; wat langer is loopt door op een volgende pagina. Bij A0 en de rol vraagt de PDF het afdrukprogramma om op ware grootte af te drukken; zet *Passend maken* in de afdrukdialoog toch uit als je programma dat negeert. Er is één keuze voor alle rapporten: wat je bij het ene rapport kiest, geldt ook voor de andere. Op A4 staand wordt een brede tabel klein, want de tabel wordt op de paginabreedte geschaald. Waar: *Instellingen* (Gantt-afdruk en Resourcediagram) of *Rapportopties* (de zeven tabelrapporten). Het Mijlpalen-overzicht en de Variance tonen geen keuzes.
 
-**Oriëntatie:** — liggend of staand. Keuze uit *Liggend* en *Staand*. Standaard: *Liggend*. Effect: zoals *Papier:*. Waar: dezelfde plek als *Papier:*.
+**Oriëntatie:** — liggend of staand. Keuze uit *Liggend* en *Staand*. Standaard: *Liggend*. Effect: zoals *Papier:*. Bij *Rol 914 mm* kies je hier de richting van de band. *Staand*: de tijdlijn ligt over de rolbreedte en de band wordt zo lang als de takenlijst. *Liggend*: de takenlijst ligt over de rolbreedte en de band loopt mee met de tijdlijn; *Auto-fit op papier* verdwijnt dan en de lengte volgt *Zoom:*. Waar: dezelfde plek als *Papier:*.
 
 ## Gantt-afdruk
 
@@ -32,13 +32,17 @@ De planning als balkenplan, met een tabel links en een tijdlijn rechts, over mee
 
 **Auteur:** — de auteur in de paginakop. Alleen lezen: de app neemt hem uit de projectinstellingen.
 
-**Lettergrootte:** — grootte van tekst en tabel in het rapport. Keuze uit 90%, 100%, 110% en 125%. Standaard: 100%. Effect: bij een grotere letter groeien tekst, rijen en tabel en levert de tijdlijn breedte in. Los van *Tekengrootte* in de instellingen.
+**Lettergrootte:** — grootte van tekst en tabel in het rapport, gemeten aan de taaknaam, in px. Van 6 tot 18 px, in stappen van 0,5. Standaard: 9 px (100 %). Effect: bij een grotere letter groeien tekst, rijen en tabel en levert de tijdlijn breedte in. Met Auto-fit kan de hele afdruk nog groter of kleiner op papier komen. De knop *Standaard (100 %, 9 px)* zet de waarde terug. Los van *Tekengrootte* in de instellingen.
+
+**Rijhoogte:** — hoogte van de rijen in de Gantt-afdruk en het Resourcediagram, in px. Van 12 tot 96 px. Standaard: automatisch, 24 px bij een lettergrootte van 9 px. Effect: een hogere rij geeft meer ruimte rond de balken, die even dik blijven; de afdruk wordt langer. Een lagere rij maakt de balken dunner. De knop *Standaard (100 %, … px)* zet de rij terug op automatisch. Los van *Rijhoogte* in de instellingen.
 
 **Balkkleuren:** — waar de kleur van een balk van afhangt. Keuze uit *Kritiek pad*, *Per taak — automatisch* en *Op categorie*, met bij *Op categorie* een keuzelijst *Categorieveld*. Standaard: *Kritiek pad*. Effect: dit is dezelfde keuze als *Balkkleuren* op het tabblad *Beeld*: verander je hem hier, dan verandert de Gantt op het scherm mee. Bestaat het gekozen veld niet in dit project, dan staat er *Dit veld bestaat niet in dit project. Werksoort wordt tijdelijk gebruikt.*
 
 **Statuslijn:** — een lijn op de statusdatum. Keuze uit *Geen*, *Statusdatumlijn* en *Voortgangslijn*. Standaard: *Geen*. Effect: *Statusdatumlijn* trekt een lijn op de statusdatum; *Voortgangslijn* trekt de zigzaglijn die per taak naar de voortgang uitstulpt. Heeft het project geen statusdatum, dan staat er *Stel eerst een statusdatum in* en tekent het rapport niets.
 
 **Volg weergave (filter, groepering, sortering)** — alleen bij de Gantt-afdruk. Standaard: uit. Effect: uit neemt de hele takenboom op papier. Aan tekent precies de rijen van het scherm: met je filter, groepering, sortering en ingeklapte fasen.
+
+**Afdrukperiode:** — alleen bij de Gantt-afdruk: het stuk van de tijdlijn dat op papier komt. Standaard: *Hele project*. Effect: de tijdas loopt exact van *Van* tot en met *Tot*. Alle taken houden hun rij in de tabel; een balk die over de rand loopt wordt daar afgekapt, en een taak buiten de periode heeft geen balk. Relatiepijlen worden op de rand afgekapt. Dezelfde keuzes als de *Rapportageperiode*, zie verderop.
 
 **Auto-fit op papier** — de tijdlijn op de paginabreedte schalen. Standaard: aan. Effect: aan schaalt de tijdlijn op de breedte van de pagina; het aantal pagina's volgt uit de hoogte. Uit gebruikt een vaste schaal (*Zoomen:*) en tegelt ook in de breedte, wat snel veel pagina's geeft.
 
@@ -213,7 +217,7 @@ De kolommen zijn onder meer *WBS*, *Naam*, *Start*, *Einde*, *Baseline start*, *
 
 ## Rapportageperiode
 
-Vier tabelrapporten en het Resourcediagram werken met een *Rapportageperiode:*: *Look-ahead*, *Voortgangsrapport*, *Resourcebelasting*, *Resourcetoewijzingen* en het *Resourcediagram*. Elk rapport onthoudt zijn eigen periode. Onder de keuzelijst staan *Van* en *Tot*, met de datums die de keuze oplevert.
+Vier tabelrapporten en het Resourcediagram werken met een *Rapportageperiode:*: *Look-ahead*, *Voortgangsrapport*, *Resourcebelasting*, *Resourcetoewijzingen* en het *Resourcediagram*. De Gantt-afdruk heeft dezelfde keuze onder de naam *Afdrukperiode:*. Elk rapport onthoudt zijn eigen periode. Onder de keuzelijst staan *Van* en *Tot*, met de datums die de keuze oplevert.
 
 **Referentiedag.** Een periode met *Volgende* of *Afgelopen* telt vanaf de statusdatum van het project, of vanaf vandaag als er geen statusdatum is. Dan staat er in de tabelrapporten *Geen statusdatum ingesteld — het rapport rekent met vandaag (…).* Schuif je de statusdatum op, dan schuift het venster mee. Beide dagen tellen mee.
 

@@ -81,3 +81,19 @@ de bytes van dezelfde letter, plus `fallbackFonts` (Inter) voor tekens die die l
 terugval valt de hele PDF om één `≤` of één Cyrillische naam terug op raster. De subsetter (`subsetFont`
 uit `hbSubset.ts`) komt als optie binnen, zodat de pagineerder headless te bundelen is; bewaking:
 `tests/planning/check-report-font.ts`.
+
+**A0 en plotterrol.** `PaperSize` kent naast A4..A1 ook `a0` en `roll914` (rapportwaarde `ROLL914`, omzetten
+via `toPaperSize`). Een rol heeft in `PAPER_PT` als lengte de grootste paginalengte (`MAX_PAGE_LENGTH_PT`,
+14 400 pt); `computeTileLayout` tegelt daarmee en kort daarna de lange as in tot de grootste tegel, zodat
+preview, raster en vector dezelfde ene doorlopende band tekenen. Staand = rolbreedte is paginabreedte;
+liggend (`rollRunsAlongTimeline`) = rolbreedte is paginahoogte, dan rekent de layout in `'actual'` en negeert
+`renderReport` Auto-fit (geen vaste breedte om op te passen). Alle pagina's van één PDF delen één maat.
+`printsAtActualSize` (A0 en rol) zet `/PrintScaling /None` in beide PDF-paden. De preview krijgt de echte
+paginamaat via de laatste parameter van `computePreviewRasterLimits`. Bewaking: `check-print-roll-paper.ts`.
+
+**Lettergrootte en rijhoogte in px** (eigenaar 2026-11-04). Het paneel toont beide als px met een knop terug
+naar standaard (`PxSizeField`, rekenhulp `src/utils/pxSize.ts`). Intern blijft `reportFontScale` een
+percentage (9 px taaknaam = 100 %), nu een vrij getal geklemd op `REPORT_FONT_SCALE_MIN..MAX`
+(`clampReportFontScale`, één bron voor paneel, loader en `makeMetrics`); `rowHeightPx` is absoluut
+(`null` = automatisch, 24 px × lettergrootte). De balk houdt de automatische rij als dikte
+(`ReportMetrics.barRowHeight`). Bewaking: `check-row-height-setting.ts`.

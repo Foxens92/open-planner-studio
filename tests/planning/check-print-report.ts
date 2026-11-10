@@ -14,11 +14,12 @@
  *  4. LEGENDA: resource-modus toont resourcenamen + rand-verklaring; critical-modus niet.
  */
 import {
-  renderReport, measurePrintReport, PrintOptions, REPORT_MIN_ZOOM, buildPrintRows, measureTaskNameColumnWidth, measureCurveColumnWidth,
+  renderReport, measurePrintReport, PrintOptions, clipRoute, REPORT_MIN_ZOOM, buildPrintRows, measureTaskNameColumnWidth, measureCurveColumnWidth,
   measureTableColumnWidths, AUTO_COLUMN_MIN_WIDTH,
   NAME_COLUMN_WIDTH_DEFAULT, NAME_COLUMN_WIDTH_MIN, NAME_COLUMN_AUTO_MAX,
 } from '@/services/print/printPreview';
 import { computeTileLayout, footerLayoutWidthFor, PAPER_PT } from '@/services/print/tileLayout';
+import { PRINT_PALETTE } from '@/engine/renderer/themePalette';
 import { fitColumnsToHeaders, makeSectionedRenderReport, makeTableRenderReport } from '@/services/pdf/pdfTable';
 import { drawCurveChart, layoutCurveChart } from '@/services/pdf/pdfCurveChart';
 import {
@@ -611,6 +612,38 @@ const baseOptions = (over: Partial<PrintOptions> = {}): PrintOptions => ({
       const tiny = record([T_CRIT], [], cal, { ...fixed, customZoom: 1, timeWindow: { from: '2026-01-10', to: '2026-01-12' } });
       const tinyBar = tiny.roundRects.find(r => r.color === CRITICAL && r.y >= tiny.dims.headerHeight && r.y < tiny.dims.height - tiny.dims.footerHeight);
       ok(!!tinyBar && tinyBar.x + tinyBar.w <= tiny.dims.width + 1e-6 && tinyBar.w >= 3 - 1e-6, `minimumbreedte naar binnen geschoven en op de chartrand geklemd (got ${JSON.stringify(tinyBar)}, chart tot ${tiny.dims.width})`);
+      // Afdrukperiode van de Gantt-afdruk: relatiepijlen worden getekend en op de chartrand
+      // afgekapt. Relatie zichtbare taak (5–9 jan) → kritieke taak (12–16 jan), FS.
+      {
+        const fs: Sequence[] = [{ id: 's-fs', predecessorId: T_NORM.id, successorId: T_CRIT.id, type: 'FINISH_START', lagDays: 0 } as Sequence];
+        const depPaths = (r: ReturnType<typeof record>) => r.paths.filter(p => p.color === PRINT_PALETTE.dependency
+          && p.pts.length > 0 && p.pts.every(pt => pt.y >= r.dims.headerHeight && pt.y < r.dims.height - r.dims.footerHeight));
+        const depHeads = (r: ReturnType<typeof record>) => r.fills.filter(f => f.color === PRINT_PALETTE.dependency && f.pts.length === 3);
+        // Venster 8–14 jan: de hele route ligt binnen het venster ⇒ pijl en punt zoals zonder venster.
+        const whole = record(FIX_TASKS, fs, cal, { ...fixed, timeWindow: { from: '2026-01-08', to: '2026-01-14' } });
+        ok(depPaths(whole).length === 1 && depHeads(whole).length === 1,
+          `venster om de hele relatie: lijn en punt getekend (got ${depPaths(whole).length} lijnen, ${depHeads(whole).length} punten)`);
+        // Venster 11–14 jan: de voorganger eindigt vóór het venster ⇒ alleen het stuk binnen de chart,
+        // de punt bij de opvolger blijft.
+        const cut = record(FIX_TASKS, fs, cal, { ...fixed, timeWindow: { from: '2026-01-11', to: '2026-01-14' } });
+        const cd = cut.dims;
+        const cutPaths = depPaths(cut);
+        ok(cutPaths.length === 1 && cutPaths[0].pts.length >= 2, `afgekapte relatie wordt getekend (got ${JSON.stringify(cutPaths.map(p => p.pts))})`);
+        ok(cutPaths.every(p => p.pts.every(pt => pt.x >= cd.tableWidth - 1e-6 && pt.x <= cd.width + 1e-6)),
+          `afgekapte relatie blijft binnen het chartgebied (got ${JSON.stringify(cutPaths.map(p => p.pts))}, tabel ${cd.tableWidth})`);
+        ok(cutPaths[0].pts.some(pt => Math.abs(pt.x - cd.tableWidth) < 1e-6), 'de lijn begint op de linker chartrand');
+        ok(depHeads(cut).length === 1, 'de pijlpunt bij de opvolger blijft');
+        // Venster 18–23 jan: beide taken ervoor ⇒ niets van de relatie.
+        const none = record(FIX_TASKS, fs, cal, { ...fixed, timeWindow: { from: '2026-01-18', to: '2026-01-23' } });
+        ok(depPaths(none).every(p => p.pts.length === 0) && depHeads(none).length === 0, 'relatie buiten het venster: geen lijn, geen punt');
+        // clipRoute als pure functie.
+        const route = [{ x: 0, y: 10 }, { x: 20, y: 10 }, { x: 20, y: 30 }, { x: 80, y: 30 }];
+        ok(JSON.stringify(clipRoute(route, 30, 60)) === JSON.stringify([[{ x: 30, y: 30 }, { x: 60, y: 30 }]]),
+          `clipRoute: verticaal buiten valt weg, horizontaal geknipt (got ${JSON.stringify(clipRoute(route, 30, 60))})`);
+        ok(clipRoute(route, -10, 100).length === 3, 'clipRoute: route binnen het bereik blijft heel');
+        ok(clipRoute([{ x: Number.NaN, y: 0 }, { x: 10, y: 0 }], 0, 100).length === 0, 'clipRoute: niet-eindig eindpunt valt weg');
+      }
+
       // Lege staat: een lange instructie wordt op woordgrenzen gewrapt, nooit halverwege afgekapt.
       // De testmeter rekent 6 px per teken; deze tekst is 143 tekens = 858 px, dus minstens twee regels.
       const lang = 'Keine Vorgänge im Berichtszeitraum — wählen Sie einen anderen Zeitraum oder Gesamtes Projekt, um alle Vorgänge des Projekts wieder zu sehen.';

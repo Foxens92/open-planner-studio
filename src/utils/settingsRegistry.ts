@@ -19,7 +19,6 @@
 // `settingsStore.ts`. Sleutels en formaten moeten daarmee in de pas blijven — bestaande opgeslagen
 // voorkeuren moeten gewoon blijven laden.
 
-import { snapToChoice } from '@/utils/numberChoice';
 import { parseBoolean, parseClampedInt as clampedInt, parseEnum as parseEnumValue } from '@/utils/settingParsers';
 import { loadBarColorSelection } from '@/utils/barColorSettings';
 import { parseFormatNoticeHidden } from '@/services/formatNoticeKinds';
@@ -32,7 +31,10 @@ import {
   DURATION_DISPLAYS,
   BAR_SPLIT_MODES,
   UI_FONT_FAMILIES,
-  UI_FONT_SCALES,
+  UI_FONT_SCALE_MIN,
+  UI_FONT_SCALE_MAX,
+  ROW_HEIGHT_PX_MIN,
+  ROW_HEIGHT_PX_MAX,
 } from '@/state/slices/types';
 import type {
   WeekStartDay,
@@ -73,13 +75,10 @@ function parseClampedInt(min: number, max: number) {
   return (raw: unknown): number | undefined => clampedInt(raw, min, max);
 }
 
-/** Numerieke keuze uit een vaste lijst. Bewust geen `parseClampedInt(min, max)`: klemmen op het
- *  BEREIK laat een waarde binnen het bereik maar buiten de lijst ongemoeid (een handmatig gezette
- *  108 bij de keuzes 90/100/110/125 overleeft de klem), en dan toont de bijbehorende Select niets
- *  zinnigs. De snap-semantiek zelf staat in {@link snapToChoice} — dat is de enige plek waar dit
- *  gedrag gedefinieerd is. */
-function parseNumberChoice(allowed: readonly number[]) {
-  return (raw: unknown): number | undefined => snapToChoice(allowed, raw);
+/** Vrij getal (ook niet-geheel) binnen een bereik: buiten het bereik wordt geklemd, geen getal ⇒ afwezig. */
+function parseClampedNumber(min: number, max: number) {
+  return (raw: unknown): number | undefined =>
+    typeof raw === 'number' && Number.isFinite(raw) ? Math.min(max, Math.max(min, raw)) : undefined;
 }
 
 /** Feedback-e-mailadres: alleen een tekst van max 254 tekens (de servergrens); leeg mag. */
@@ -190,11 +189,12 @@ export const SETTINGS: SettingDescriptor[] = [
   setting({ key: 'dateNotation', field: 'dateNotation', parse: parseEnum(DATE_NOTATIONS) }),
   setting({ key: 'timeNotation', field: 'timeNotation', parse: parseEnum(TIME_NOTATIONS) }),
 
-  // Lettertype interface: familie (enum) + schaalpercentage. De schaal snapt naar de
-  // dichtstbijzijnde waarde uit UI_FONT_SCALES — dezelfde lijst waaruit de Select zijn opties bouwt
-  // — zodat een geladen waarde gegarandeerd overeenkomt met een aanwijsbare optie.
+  // Lettertype interface: familie (enum) + schaalpercentage. De schaal is sinds de px-invoer een vrij
+  // getal binnen het bereik; oude waarden (90/100/110/125) vallen daar binnen en blijven gelijk.
   setting({ key: 'uiFontFamily', field: 'uiFontFamily', parse: parseEnum(UI_FONT_FAMILIES) }),
-  setting({ key: 'uiFontScale', field: 'uiFontScale', parse: parseNumberChoice(UI_FONT_SCALES) }),
+  setting({ key: 'uiFontScale', field: 'uiFontScale', parse: parseClampedNumber(UI_FONT_SCALE_MIN, UI_FONT_SCALE_MAX) }),
+  // Rijhoogte van raster en tijdlijn in px. Afwezig of `null` (terug naar standaard) ⇒ automatisch.
+  setting({ key: 'rowHeightPx', field: 'rowHeightPx', parse: parseClampedInt(ROW_HEIGHT_PX_MIN, ROW_HEIGHT_PX_MAX) }),
 
   // Urenplanning
   setting({ key: 'showTaskTypes', field: 'showTaskTypes', parse: parseBoolean }),

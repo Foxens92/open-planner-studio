@@ -9,8 +9,10 @@ import { formatBytes } from '@/utils/formatBytes';
 import { getReleaseHighlights, type HighlightIcon, type ReleaseHighlight } from '@/services/updater/releaseHighlights';
 import { isTauri } from '@/utils/platform';
 import { openHelpArticleGuarded } from '@/components/common/HelpButton';
+import { GITHUB_REPO } from '@/services/githubRepo';
 
-const CHANGELOG_URL = 'https://github.com/OpenAEC-Foundation/open-planner-studio/wiki/Changelog';
+// De releasepagina van dezelfde repository als de updater (deze fork heeft geen wiki-changelog).
+const CHANGELOG_URL = `https://github.com/${GITHUB_REPO}/releases`;
 const ICONS: Record<HighlightIcon, IconId> = { import: 'file.import', library: 'company.library', relations: 'planning.relations-menu', tasks: 'layout.task-tree', examples: 'file.examples' };
 
 async function openExternal(url: string): Promise<boolean> {

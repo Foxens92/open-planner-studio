@@ -83,7 +83,7 @@ import type {
   TaskGridSurfaceId,
 } from '@/types/taskGrid';
 import { askActualStart } from '@/state/actualStartQuestion';
-import { TASK_ROW_HEIGHT } from '@/engine/taskGrid/rowHeight';
+import { taskRowHeight } from '@/engine/taskGrid/rowHeight';
 import { Icon } from '@/components/icons';
 
 interface EditingCell {
@@ -312,6 +312,7 @@ export function TaskGridSurface({
   const durationDisplay = useEffectiveDurationDisplay();
   const countsWorkdays = useProfileCountsWorkdays();
   const uiFontScale = useAppStore(state => state.ui.uiFontScale);
+  const rowHeightPx = useAppStore(state => state.ui.rowHeightPx);
   const traceMode = useAppStore(state => state.ui.traceMode);
   const showColumnsDialog = useAppStore(state => state.ui.showColumnsDialog);
   const collapsedTaskIds = useAppStore(state => state.ui.collapsedTaskIds);
@@ -1101,7 +1102,7 @@ export function TaskGridSurface({
   }, [activeDocumentId, adapter, addTask, applySelection, collapsedTaskIds, editing, focusOnTask, ghostTask, nameIndentMode, rowIndex, selection, showSummaryAdd, tCommon, tTask, tasksById, toggleCollapse, validationMessage, visibleColumnIds]);
 
   // Zelfde basis als de Gantt-tijdlijn (`taskGrid/rowHeight.ts`), zodat raster en balken rij-op-rij lopen.
-  const rowHeight = Math.max(25, Math.round(TASK_ROW_HEIGHT * uiFontScale / 100));
+  const rowHeight = taskRowHeight(uiFontScale, rowHeightPx);
   const headerHeight = Math.max(24, Math.round(baseHeaderHeight * uiFontScale / 100));
   const viewportHeight = Math.max(0, size.height - headerHeight);
   const handleExternalRelationMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {

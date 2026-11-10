@@ -507,6 +507,7 @@ const baseInput: GanttRenderOptionsInput = {
   canvasWidth: 1200,
   canvasHeight: 800,
   rowHeight: 28,
+  barRowHeight: 28,
   headerHeight: 50,
   localizedMonths: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
   localizedWeekdays: ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'],

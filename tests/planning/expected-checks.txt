@@ -268,6 +268,7 @@ check-print-bar-moments.ts matrix
 check-print-compress-week-banding.ts matrix
 check-print-raster-export-streaming.ts matrix
 check-print-report.ts matrix
+check-print-roll-paper.ts matrix
 check-print-screen-parity.ts matrix
 check-print-working-exceptions.ts matrix
 check-profile-switch-dates.ts matrix
@@ -330,6 +331,7 @@ check-resttempo.ts matrix
 check-restwerk-duurwijziging.ts matrix
 check-ribbon-overlays.ts matrix
 check-row-drag-intent.ts matrix
+check-row-height-setting.ts matrix
 check-run-ts-cleanup.ts matrix
 check-save-failure-status.ts matrix
 check-saved-filters.ts matrix

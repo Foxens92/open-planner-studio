@@ -20,7 +20,7 @@
  */
 
 import { buildImagePdf, type PdfImagePage } from '@/utils/miniPdf';
-import { computeTileLayout, type PaperSize, type Orientation, type PaginateMode } from './tileLayout';
+import { computeTileLayout, printsAtActualSize, type PaperSize, type Orientation, type PaginateMode } from './tileLayout';
 import { dataUrlToBytes } from '@/utils/dataUrl';
 
 export interface PaginateOptions {
@@ -197,7 +197,7 @@ export function paginateCanvasToPdfBytes(canvas: HTMLCanvasElement, opts: Pagina
     pageCanvas.height = 0;
   }
 
-  return buildImagePdf(pdfPages);
+  return buildImagePdf(pdfPages, { printScalingNone: printsAtActualSize(opts.paperSize) });
 }
 
 /**

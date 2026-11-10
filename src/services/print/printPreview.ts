@@ -8,7 +8,8 @@ import type { DateNotation, DurationDisplay, TimeNotation } from '@/types/view';
 import type { Draw2D } from '@/services/pdf/draw2d';
 import { CanvasDraw2D } from '@/services/pdf/canvasDraw2d';
 import { DEFAULT_REPORT_FONT_STACK } from '@/services/pdf/reportFont';
-import { printableWidthLogicalPx, type TileLayout } from '@/services/print/tileLayout';
+import { printableWidthLogicalPx, rollRunsAlongTimeline, toPaperSize, type TileLayout } from '@/services/print/tileLayout';
+import type { ReportPaperSize } from '@/utils/reportSettings';
 // Print-vriendelijk kleurschema uit het centrale themapalet.
 import { PRINT_PALETTE as PRINT_COLORS, doneBarTones } from '@/engine/renderer/themePalette';
 import { isCompressedEffective, resolveGanttAxis } from '@/engine/renderer/workdayAxis';
@@ -16,7 +17,6 @@ import { taskSplitSegments } from '@/engine/renderer/splitBarGeometry';
 import { milestoneAnchorX, taskBarSpan } from '@/engine/renderer/barSpan';
 import { taskDateLabel } from '@/utils/taskDateLabel';
 import { paintProgressBarPiece } from '@/engine/renderer/barPaint';
-import { snapToChoice } from '@/utils/numberChoice';
 import { isLeafTask, isSummaryTask } from '@/utils/taskHierarchy';
 // Balkkleurmodi: pure adviesmodule — de printlaag vertaalt alleen naar
 // fill/segmenten/outline-aanroepen en houdt zelf geen kleurlogica.
@@ -56,7 +56,6 @@ import type { DurationSuffixes } from '@/utils/durationFormat';
 
 // BASISmaten bij rapport-lettergrootte 100%. Niets tekent hier nog rechtstreeks mee: alle
 // tekenhelpers rekenen met de geschaalde varianten uit {@link ReportMetrics}/{@link makeMetrics}.
-const ROW_HEIGHT = 24;
 const PROJECT_HEADER_HEIGHT = 64;
 const TIMELINE_HEADER_HEIGHT = 44;
 // De tabelbreedte is geen constante maar de som van de kolommen (zie `COL` en `tableWidthFor`).
@@ -539,6 +538,9 @@ interface ReportMetrics {
   /** `font(9)` / `font(9, true)` → de CSS-fontstring met de geschaalde puntgrootte. */
   font(size: number, bold?: boolean): string;
   rowHeight: number;
+  /** Rijhoogte waarop de balken gemaakt zijn: die bij rijhoogte 100% (zie `PrintOptions.rowHeightPx`).
+   *  Een hogere rij geeft lucht rond een even dikke balk; een lagere rij een dunnere balk. */
+  barRowHeight: number;
   projectHeaderHeight: number;
   timelineHeaderHeight: number;
   totalHeaderHeight: number;
@@ -548,20 +550,48 @@ interface ReportMetrics {
 }
 
 /**
- * De aangeboden rapport-lettergroottes (percentage). Dit is de ENIGE bron van waarheid: de Select in
- * `ReportPanel` bouwt zijn opties hieruit, `loadReportSettings` valideert ertegen en `makeMetrics`
- * snapt ernaartoe.
+ * Lettergrootte en rijhoogte van de afdruk worden sinds 2026-11-04 (eigenaar) in PIXELS ingesteld:
+ * de lettergrootte als die van de taaknaam in de tabel (9 px bij 100 %), de rijhoogte als absolute
+ * maat (24 px × lettergrootte als standaard). Pixels zijn hier tekenpixels van de render (96 per
+ * inch, dus 0,75 pt op papier bij schaal 1); de pagineerder kan de hele tekening nog schalen
+ * (Auto-fit). Intern blijft de lettergrootte een percentage (`reportFontScale`), nu een vrij getal
+ * binnen {@link REPORT_FONT_SCALE_MIN}..{@link REPORT_FONT_SCALE_MAX}. Dit zijn de ENIGE grenzen: het
+ * paneel, `loadReportSettings` en `makeMetrics` klemmen er allemaal op.
  */
-export const REPORT_FONT_SCALES = [90, 100, 110, 125] as const;
+export const REPORT_TEXT_BASE_PX = 9;
+export const REPORT_TEXT_PX_MIN = 6;
+export const REPORT_TEXT_PX_MAX = 18;
+export const REPORT_TEXT_PX_STEP = 0.5;
+export const REPORT_FONT_SCALE_MIN = (REPORT_TEXT_PX_MIN / REPORT_TEXT_BASE_PX) * 100;
+export const REPORT_FONT_SCALE_MAX = (REPORT_TEXT_PX_MAX / REPORT_TEXT_BASE_PX) * 100;
+/** Rijhoogte van de afdruk bij lettergrootte 100 % (de oude vaste rij). */
+export const REPORT_ROW_BASE_PX = 24;
+export const REPORT_ROW_PX_MIN = 12;
+export const REPORT_ROW_PX_MAX = 96;
+
+/** Lettergrootte-percentage geklemd op het bereik; onbruikbaar ⇒ 100. */
+export function clampReportFontScale(raw: unknown): number {
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(REPORT_FONT_SCALE_MAX, Math.max(REPORT_FONT_SCALE_MIN, raw))
+    : 100;
+}
+
+/** Ingestelde rijhoogte (px) geklemd op het bereik; `null`/onbruikbaar ⇒ `null` (automatisch). */
+export function clampReportRowHeightPx(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(REPORT_ROW_PX_MAX, Math.max(REPORT_ROW_PX_MIN, raw))
+    : null;
+}
+
+/** De automatische rijhoogte (de standaard) bij een lettergrootte-percentage. */
+export function reportAutoRowHeightPx(reportFontScale: number | undefined): number {
+  return REPORT_ROW_BASE_PX * clampReportFontScale(reportFontScale ?? 100) / 100;
+}
 
 /**
  * Bouw de {@link ReportMetrics} voor een render. `reportFontScale` is een PERCENTAGE; ontbreekt hij
- * (of is hij onbruikbaar) dan geldt 100 ⇒ factor exact 1.
- *
- * Een waarde buiten {@link REPORT_FONT_SCALES} wordt naar de dichtstbijzijnde toegestane waarde
- * GESNAPT, niet op het bereik geklemd. Klemmen zou een 108 gewoon op 108% renderen — een grootte die
- * geen enkele Select kan tonen en die na een herstart dus niet reproduceerbaar is. Zelfde semantiek
- * als in de settings- en rapport-loaders, allemaal via {@link snapToChoice}.
+ * (of is hij onbruikbaar) dan geldt 100 ⇒ factor exact 1. Een waarde buiten het bereik wordt geklemd.
+ * `rowHeightPx` is de ingestelde rijhoogte; `null`/afwezig ⇒ automatisch (24 px × lettergrootte).
  */
 function makeMetrics(
   reportFontScale: number | undefined,
@@ -571,9 +601,12 @@ function makeMetrics(
   curveColumnWidth?: number,
   columnWidths?: TableColumnWidths,
   fontStack: string = DEFAULT_REPORT_FONT_STACK,
+  rowHeightPx?: number | null,
 ): ReportMetrics {
-  const pct = snapToChoice(REPORT_FONT_SCALES, reportFontScale ?? 100) ?? 100;
-  const k = pct / 100;
+  const k = clampReportFontScale(reportFontScale ?? 100) / 100;
+  // De automatische rij hoort bij de lettergrootte; een ingestelde rij is een absolute maat.
+  const autoRow = REPORT_ROW_BASE_PX * k;
+  const rowHeight = clampReportRowHeightPx(rowHeightPx) ?? autoRow;
   const widths = resolveColumnWidths(taskNameColumnWidth, curveColumnWidth, columnWidths);
   const projectHeaderHeight = PROJECT_HEADER_HEIGHT * k;
   const timelineHeaderHeight = TIMELINE_HEADER_HEIGHT * k;
@@ -581,7 +614,8 @@ function makeMetrics(
     k,
     s: (v) => v * k,
     font: (size, bold) => `${bold ? 'bold ' : ''}${size * k}px ${fontStack}`,
-    rowHeight: ROW_HEIGHT * k,
+    rowHeight,
+    barRowHeight: Math.min(rowHeight, autoRow),
     projectHeaderHeight,
     timelineHeaderHeight,
     // Bewust de SOM van de twee geschaalde hoogtes, niet `(PROJECT + TIMELINE) * k`: alleen zo valt
@@ -615,7 +649,7 @@ export interface PrintOptions {
   showBaselineOverlay?: boolean;
   autoFit: boolean;
   customZoom: number;
-  paperSize: 'A4' | 'A3' | 'A2' | 'A1';
+  paperSize: ReportPaperSize;
   orientation: 'landscape' | 'portrait';
   companyName: string;
   labels?: {
@@ -668,15 +702,15 @@ export interface PrintOptions {
    */
   timelineColumns?: number;
   /**
-   * OPTIONEEL — rapportageperiode als TIJDVENSTER (resourcediagram): de
+   * OPTIONEEL — rapportageperiode (resourcediagram) of afdrukperiode (Gantt-afdruk) als TIJDVENSTER: de
    * tijdas loopt exact van `from` t/m `to` (ISO-dagen, inclusief) zonder de gebruikelijke marge van
    * 7/14 dagen, en balken, mijlpalen, speling, voortgang en baseline worden op de chartrand
    * afgekapt — `Draw2D` kent geen clip, dus de geometrie zelf wordt geklemd (ook de 3 px-
-   * minimumbreedte van een balk en het middelpunt van een ruit; relatiepijlen worden bij een
-   * venster helemaal niet getekend). Welke rijen in het
-   * venster horen beslist de rijenbron (`computeResourceGanttRows`), niet de render; een rij die
-   * er toch buiten valt tekent gewoon geen balk. Relatiepijlen worden niet geklemd: het venster
-   * wordt alleen aangeboden op het resourcediagram, dat er geen tekent. Afwezig ⇒ geen venster.
+   * minimumbreedte van een balk en het middelpunt van een ruit; relatiepijlen worden per stuk op
+   * de chartrand geknipt via `clipRoute`, een pijlpunt die niet helemaal binnen valt vervalt). Welke
+   * rijen in het venster horen beslist de rijenbron (`computeResourceGanttRows` filtert; de
+   * Gantt-afdruk houdt bewust alle rijen), niet de render; een rij die er buiten valt tekent gewoon
+   * geen balk. Afwezig ⇒ geen venster.
    */
   timeWindow?: { from: string; to: string };
   /**
@@ -727,6 +761,13 @@ export interface PrintOptions {
    * bij {@link ReportMetrics}, want uniform schalen zou onder de fit-width-pagineerder niets doen.
    */
   reportFontScale?: number;
+  /**
+   * Rijhoogte van de Gantt-afdruk in tekenpixels ({@link REPORT_ROW_PX_MIN}..{@link REPORT_ROW_PX_MAX}).
+   * `null`/ontbrekend = automatisch (24 px × lettergrootte, het oude gedrag). Balken, ruiten en
+   * baselinestrook houden de dikte van de automatische rij en staan in het midden van een hogere rij;
+   * bij een lagere rij worden ze dunner.
+   */
+  rowHeightPx?: number | null;
   /**
    * CSS-fontstack van alle rapporttekst op het canvas (preview, raster-export). Ontbreekt ⇒ het
    * gevendorde Inter (`DEFAULT_REPORT_FONT_STACK`), dus dan tekent de render exact als voorheen.
@@ -972,17 +1013,15 @@ export function renderReport(
   // rechtstreeks (zie {@link ReportMetrics} voor het waarom van relatief-schalen).
   // Bronbreedte van één papierbreedte (zie de uitleg bij `availableChartWidth` verderop); hier al
   // nodig om te beslissen of de toewijzingskolommen erbij passen.
-  const printableWidth = printableWidthLogicalPx(
-    options.paperSize.toLowerCase() as 'a4' | 'a3' | 'a2' | 'a1',
-    options.orientation,
-  );
+  const paper = toPaperSize(options.paperSize);
+  const printableWidth = printableWidthLogicalPx(paper, options.orientation);
   let assignmentColumns = !!options.assignmentColumns;
-  let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily);
+  let m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, assignmentColumns, options.curveColumnWidth, options.columnWidths, options.fontFamily, options.rowHeightPx);
   let assignmentColumnsDropped = false;
   if (assignmentColumns && m.tableWidth > printableWidth - minChartWidthPx(printableWidth)) {
     assignmentColumns = false;
     assignmentColumnsDropped = true;
-    m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, false, undefined, options.columnWidths, options.fontFamily);
+    m = makeMetrics(options.reportFontScale, options.showCompletion, options.taskNameColumnWidth, false, undefined, options.columnWidths, options.fontFamily, options.rowHeightPx);
   }
 
   // Rijen-bron: zie {@link buildPrintRows} — taakrijen mét diepte plus groepsband-rijen die
@@ -1097,7 +1136,9 @@ export function renderReport(
   const availableChartWidth = Math.max(1, printableWidth - m.tableWidth) * timelineColumns;
 
   let zoom: number;
-  if (options.autoFit && timelineDays > 0) {
+  // Een rol langs de tijdlijn heeft geen vaste breedte om op te passen: dan geldt de handmatige
+  // zoom (zie `rollRunsAlongTimeline`).
+  if (options.autoFit && timelineDays > 0 && !rollRunsAlongTimeline(paper, options.orientation)) {
     zoom = availableChartWidth / timelineDays;
   } else {
     zoom = options.customZoom || 22;
@@ -1306,7 +1347,8 @@ export function renderReport(
   }
 
   // Task bars
-  const barHeight = m.rowHeight * 0.55;
+  // De balk hoort bij de rij van 100%; een hogere rij (rijhoogte-instelling) centreert hem.
+  const barHeight = m.barRowHeight * 0.55;
   const barOffset = (m.rowHeight - barHeight) / 2;
 
   // De taaknaam-labels worden hier alleen VERZAMELD en pas ná de relatiepijlen getekend — zie de
@@ -1615,9 +1657,10 @@ export function renderReport(
   // In de vector-PDF staat tekst sowieso boven alle vormen (vormen gaan in het gedeelde
   // Form-XObject, tekst wordt daarná per tegel geëmit); deze volgorde brengt de RASTER-preview
   // daarmee in lijn, want die twee horen WYSIWYG te zijn.
-  // Bij een tijdvenster worden relaties nooit getekend: `drawDependencies` klemt niet, en het
-  // venster wordt alleen op het resourcediagram aangeboden, dat sowieso geen relaties tekent.
-  if (options.showDeps && !windowed) {
+  // Bij een tijdvenster (afdrukperiode van de Gantt-afdruk) worden de pijlen op de chartrand
+  // afgekapt: `Draw2D` kent geen clip, dus `drawDependencies` knipt de route zelf. Het
+  // resourcediagram tekent sowieso geen relaties (`reportTypeDrawsRelations`).
+  if (options.showDeps) {
     // Volg-weergave: alleen relaties waarvan béide endpoints een zichtbare rij zijn (zelfde
     // regel als het scherm). rowIndexOf indexeert printRows (groepsbanden meegerekend) en is
     // daarmee tegelijk het zichtbaarheids- én het y-positie-bron; in boom-modus zijn alle taken
@@ -1627,7 +1670,8 @@ export function renderReport(
     printRows.forEach((r, idx) => {
       if (r.kind === 'task' && r.task) { rowIndexOf.set(r.task.id, idx); tasksById.set(r.task.id, r.task); }
     });
-    drawDependencies(d2d, m, tasksById, sequences, dateToX, rowToY, zoom, options, rowIndexOf);
+    drawDependencies(d2d, m, tasksById, sequences, dateToX, rowToY, zoom, options, rowIndexOf,
+      windowed ? [m.tableWidth, canvasWidth] : undefined);
   }
 
   for (const job of barLabelJobs) {
@@ -2470,6 +2514,34 @@ function drawTaskTable(
  * omweg nodig om ze zichtbaar te houden, het rapport tekent ze erBOVEN (zie de tekenvolgorde in
  * `renderReport`) — daar bestaat het occlusieprobleem niet.
  */
+/**
+ * Knip een assenparallelle route (afwisselend horizontale en verticale stukken) op het x-bereik
+ * [lo, hi]. Levert de zichtbare stukken als losse segmenten; een stuk buiten het bereik (of met een
+ * niet-eindig eindpunt, b.v. een taak zonder balk) valt weg. Exporteerd voor de regressietest.
+ */
+export function clipRoute(
+  route: readonly { x: number; y: number }[],
+  lo: number,
+  hi: number,
+): [{ x: number; y: number }, { x: number; y: number }][] {
+  const out: [{ x: number; y: number }, { x: number; y: number }][] = [];
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1];
+    const b = route[i];
+    if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) continue;
+    if (a.x === b.x) {
+      if (a.x >= lo && a.x <= hi && a.y !== b.y) out.push([a, b]);
+      continue;
+    }
+    const x1 = Math.max(lo, Math.min(a.x, b.x));
+    const x2 = Math.min(hi, Math.max(a.x, b.x));
+    if (x2 <= x1) continue;
+    // Richting behouden (van a naar b), zodat een streepjespatroon dezelfde kant op loopt.
+    out.push(a.x < b.x ? [{ x: x1, y: a.y }, { x: x2, y: b.y }] : [{ x: x2, y: a.y }, { x: x1, y: b.y }]);
+  }
+  return out;
+}
+
 function drawDependencies(
   d2d: Draw2D,
   m: ReportMetrics,
@@ -2481,6 +2553,8 @@ function drawDependencies(
   options: PrintOptions,
   /** Volg-weergave: alleen paren met béide endpoints zichtbaar; óók de rij-index-bron. */
   rowIndexOf: Map<string, number>,
+  /** Tijdvenster: alleen het deel van elke route tussen deze twee x-waarden tekenen (chartgebied). */
+  clipX?: readonly [number, number],
 ) {
   d2d.lineWidth = 1.2;
 
@@ -2545,28 +2619,43 @@ function drawDependencies(
     //    "omheen" via de rijgoot: de horizontale scheiding tussen twee rijen (bovenrand van de
     //    opvolger-rij als die eronder ligt, onderrand als hij erboven ligt), een paar px de rij in
     //    zodat de lijn nét naast de rasterlijn valt.
-    d2d.beginPath();
     // Voorwaarts (knik volstaat) als `outX` ruim buiten de opvolgerbalk ligt aan de aankomstkant:
     // bij start-aankomst (dirIn −1) rechts ervan, bij finish-aankomst (dirIn +1) links ervan.
+    let route: { x: number; y: number }[];
     if ((outX - toX) * dirIn >= DEP_STUB) {
-      d2d.moveTo(fromX, predY);
-      d2d.lineTo(outX, predY);
-      d2d.lineTo(outX, succY);
-      d2d.lineTo(toX, succY);
+      route = [{ x: fromX, y: predY }, { x: outX, y: predY }, { x: outX, y: succY }, { x: toX, y: succY }];
     } else {
       const gutterInset = 2;
       const gutterY = succIdx > predIdx
         ? rowToY(succIdx) + gutterInset            // opvolger eronder ⇒ goot = bovenrand opvolger-rij
         : rowToY(succIdx) + m.rowHeight - gutterInset; // opvolger erboven ⇒ goot = onderrand opvolger-rij
       const inX = toX + dirIn * DEP_STUB;
-      d2d.moveTo(fromX, predY);
-      d2d.lineTo(outX, predY);
-      d2d.lineTo(outX, gutterY);
-      d2d.lineTo(inX, gutterY);
-      d2d.lineTo(inX, succY);
-      d2d.lineTo(toX, succY);
+      route = [
+        { x: fromX, y: predY }, { x: outX, y: predY }, { x: outX, y: gutterY },
+        { x: inX, y: gutterY }, { x: inX, y: succY }, { x: toX, y: succY },
+      ];
+    }
+    d2d.beginPath();
+    if (!clipX) {
+      // Zonder venster: één doorlopend pad, byte-identiek aan het gedrag van vóór het venster.
+      d2d.moveTo(route[0].x, route[0].y);
+      for (let i = 1; i < route.length; i++) d2d.lineTo(route[i].x, route[i].y);
+    } else {
+      // Met venster: de route bestaat uit horizontale en verticale stukken. Een horizontaal stuk
+      // wordt op [lo, hi] geknipt, een verticaal stuk valt helemaal binnen of helemaal buiten.
+      for (const [a, b] of clipRoute(route, clipX[0], clipX[1])) {
+        d2d.moveTo(a.x, a.y);
+        d2d.lineTo(b.x, b.y);
+      }
     }
     d2d.stroke();
+
+    // Pijlpunt alleen als hij helemaal binnen het venster valt: een halve punt op de rand leest als
+    // een balkrand.
+    if (clipX) {
+      const tipBack = toX + dirIn * 5;
+      if (!(Math.min(toX, tipBack) >= clipX[0] && Math.max(toX, tipBack) <= clipX[1])) continue;
+    }
 
     // Arrowhead (filled triangle) — een `fill` negeert het dash-patroon, dus ook een niet-bepalende
     // relatie houdt een massieve pijlpunt (net als op het scherm).
